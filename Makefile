@@ -10,6 +10,13 @@ synthax:
 	camlp4o pa_extend.cmo q_MLast.cmo pa_speculog.ml -o pa_speculog.ast
 	ocamlbuild pa_speculog.cmo
 
+matrix:
+	ocamlbuild -tag use_ocaml-cudd -tag use_ocaml-aiger examples/matrix.byte --
+
+cycles:
+	ocamlbuild -tag use_ocaml-cudd -tag use_ocaml-aiger examples/scheduling.byte --
+
+
 simulation.byte: *.ml
 	ocamlbuild simulation.byte
 

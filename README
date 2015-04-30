@@ -1,1 +1,9 @@
 Speculoos is a set of tools for specification that can be converted to AIGER files and synthesized with external tools.
+
+To install the tool, run:
+   make
+
+To generate some examples, run:
+   make cycles
+   make matrix
+
