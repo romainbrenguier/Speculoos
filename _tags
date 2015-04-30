@@ -1,0 +1,9 @@
+<aigerBdd.*> or <speculog.*> or <modules.*> or <simulation.*> or <boolean.*> or <integer.*>: use_ocaml-aiger, use_ocaml-cudd
+<pa_speculog.*>: pp(camlp4o  pa_extend.cmo q_MLast.cmo), use_ocaml-aiger, use_ocaml-cudd, camlp4
+<speculogAdd.*> or <speculogSynth.*>: use_ocaml-aiger, use_ocaml-cudd
+<expression.*>: use_ocaml-aiger
+<parser.*>: pp(camlp4o), use_ocaml-aiger
+<type.*>: pp(camlp4o), use_ocaml-cudd, use_ocaml-aiger
+<parametricModule.*> or <moduleParser.*> or <environment.*> or <regularExpression.*> or <standard.*>: use_ocaml-aiger
+<regularExpression.*> or <moduleParser.*> : pp(camlp4o)
+<regularExpression.*> : use_ocaml-cudd
