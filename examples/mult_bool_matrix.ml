@@ -270,7 +270,7 @@ let main =
     Aiger.write_to_file (generate false i j k) file_name;
   in
 
-  for i = 11 to 30 
+  for i = 30 to 100
   (*do for j = 10 to i - 1
      do for k = 9 to j - 1
 	do 

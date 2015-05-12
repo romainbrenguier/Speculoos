@@ -1,22 +1,23 @@
 (* ocamlbuild -tag use_ocaml-cudd -tag use_ocaml-aiger examples/timed_automata.byte *)
+module Expr = Expression
 
-type clock = Clock 
+type clock = Expr.t
 
-let clock name size = Speculog.reg name size
-let clock_to_int x = ((Expr.cast x):(int Expr.t))
+let clock name size = Expr.var name (Type.int size)
+let clock_to_expr x = x
 
-type order = Less | LessEq | Eq | GreaterEq | Greater
-let order_to_expr = function
+type operator = Less | LessEq | Eq | GreaterEq | Greater
+let operator_to_expr = function
   | Less -> Expr.less
   | LessEq -> Expr.less_eq
   | Eq -> Expr.equals
   | GreaterEq -> Expr.greater_eq
   | Greater -> Expr.greater
 
-type guard = clock Expr.t * order * int Expr.t
+type guard = Expr.t * operator * Expr.t
 
 let guard_to_expr (c,o,i) dt =
-  (order_to_expr o) (clock_to_int (Expr.add c dt)) i
+  (operator_to_expr o) (clock_to_expr (Expr.add c dt)) i
 
 let guards_to_expr gl dt =
   List.fold_left
@@ -24,72 +25,97 @@ let guards_to_expr gl dt =
       Expr.conj accu (guard_to_expr g dt)
     ) (Expr.bool true) gl
 
-type location = {id : int; invariant : bool Expr.t }
-type transition = {src : int; dst : int; guards : guard list; resets : (clock Expr.t) list }
-type t = {declarations : Speculog.declaration list; clocks: (clock Expr.t) list;
-	  locations: location list; transitions: transition list;
+type location = {id : int; invariant : Expr.t }
+type transition = {src : int; dst : int; guards : guard list; resets : clock list }
+
+  
+
+type t = {clocks: clock list;
+	  locations: location list; 
+	  transitions: transition list;
 	  maxval : int}
 
 
 let to_spec auto =
-  let d,location = Speculog.reg "location" (Expr.log (List.length auto.locations)) in
-  let dl = d :: auto.declarations in
-  let mlog = Expr.log auto.maxval in
-  let d,dt = Speculog.input "dt" mlog in
-  let dl = d :: dl in
+  let llog = Common.log (List.length auto.locations) in
+  let mlog = Common.log auto.maxval in
+  let location = Expr.var "location" (Type.int llog) in
+  let dest = Expr.var "destination" (Type.int llog) in
+  let dt = Expr.var "time_elapse" (Type.int mlog) in
   let max_location = List.fold_left (fun m l -> max m l.id) 0 auto.locations in
   let invariant_array = Array.make (max_location + 1) (Expr.bool true) in
   List.iter (fun l -> invariant_array.(l.id) <- l.invariant) auto.locations;
-  let trans =
+
+  let constraint_expression trans =
+    Expr.conj
+      (Expr.equals dest (Expr.int trans.dst))
+      (Expr.conj 
+	 (Expr.equals location (Expr.int trans.src))
+	 (guards_to_expr trans.guards dt))
+  in
+
+  let clock_update trans clock = 
+    if List.mem clock trans.resets then Expr.int 0 else Expr.add clock dt
+  in
+
+  let location_update trans = Expr.int trans.dst in
+
+
+  let new_location =
     List.fold_left 
       (fun accu t ->
-	let clock_updates = 
-	  List.fold_left
-	    (fun accu c -> 
-	      let cond =
-		if List.mem c t.resets 
-		then Expr.equals (clock_to_int (Expr.next c)) (Expr.int 0)
-		else Expr.equals (Expr.next c) (Expr.add c dt) 
-	      in Expr.conj accu cond
-	  ) (Expr.bool true) auto.clocks
-	in 
-	let cond = 
-	  Expr.conj (Expr.equals location (Expr.int t.src))
-	    (Expr.conj (Expr.equals (Expr.next location) (Expr.int t.dst))
-	       (Expr.conj clock_updates
-		  (Expr.conj (guards_to_expr t.guards dt) invariant_array.(t.dst))))
-	in
-	Expr.disj accu cond
-      ) (Expr.bool false) auto.transitions
+       Expr.ite (constraint_expression t)
+		(location_update t)
+		accu
+      ) (Expr.int 0) auto.transitions
   in 
-  dl, trans
+
+  let new_clock c =
+    List.fold_left 
+      (fun accu t ->
+       Expr.ite (constraint_expression t)
+		(clock_update t c)
+		accu
+      ) (Expr.int 0) auto.transitions
+  in 
+
+  List.fold_left 
+    (fun accu c -> 
+     (c, new_clock c) :: accu
+    ) [location, new_location] auto.clocks 
 
 
+let to_aiger auto = 
+  let spec = to_spec auto in
+  Cudd.init 100;
+  Expr.functional_synthesis spec
 
-let test = 
-  let decl,c = clock "clock1" 8 in
+let write_aiger t name =
+  let outch = open_out name in
+  Aiger.write (to_aiger t) outch;
+  close_out outch
+
+let test () = 
+  let c = clock "clock1" 8 in
   let loc0 = {id=0; invariant = Expr.bool true} in
   let loc1 = {id=1; invariant = Expr.bool true} in
   let trans0 = {src=0; dst=0; guards=[c,LessEq,Expr.int 35]; resets=[]} in
   let trans1 = {src=0; dst=1; guards=[c,Greater,Expr.int 35]; resets=[]} in
   let trans2 = {src=1; dst=1; guards=[c,LessEq,Expr.int 23]; resets=[]} in
   let trans3 = {src=1; dst=1; guards=[c,Greater,Expr.int 23]; resets=[c]} in
-  let auto = {declarations=[decl];clocks=[c];locations=[loc0;loc1];
+  let auto = {clocks=[c];locations=[loc0;loc1];
 	      transitions=[trans0;trans1;trans2;trans3]; maxval=511}
   in
-  let decl,expr = to_spec auto in
-  Cudd.init 100;
-  (*print_endline (Expr.to_string expr);*)
-  try
-    let aiger = Speculog.synthesize decl [expr] in
-    print_endline "writing aiger file to timed_auto.aig";
-    Aiger.write_to_file aiger "timed_auto.aig"
-  with Speculog.NonSynthesizable (e,f) ->
-    let d,fail = Speculog.output "fail" 1 in
-    let spec = Expr.ite f (Expr.equals fail (Expr.bool true)) (Expr.conj e (Expr.neg fail)) in
-    let aiger = Speculog.synthesize (d::decl) [spec] in
-    print_endline "writing aiger file to timed_auto.aig";
-    Aiger.write_to_file aiger "timed_auto.aig"
+  print_endline "writing aiger file to timed_auto.aag";
+  write_aiger auto "timed_auto.aag"
+
+
+let main = 
+  if Filename.check_suffix Sys.argv.(0) "timed_automata" 
+     || Filename.check_suffix Sys.argv.(0) "timed_automata.byte" 
+  then test ()
+  else ()
+
 
 (*  
 let dc = 1

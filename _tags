@@ -7,3 +7,5 @@
 <parametricModule.*> or <moduleParser.*> or <environment.*> or <regularExpression.*> or <standard.*>: use_ocaml-aiger
 <regularExpression.*> or <moduleParser.*> : pp(camlp4o)
 <regularExpression.*> : use_ocaml-cudd
+<decomposition.*> : use_ocaml-aiger
+<verilog.*> : use_ocaml-aiger

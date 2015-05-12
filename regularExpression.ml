@@ -445,19 +445,15 @@ let coaccessible auto =
     
 
 (* takes as input an automaton without epsilon transitions *)
-let automaton_to_aiger auto =
-  (*let states = IntSet.elements (states auto) in*)
-  (*let nb_states = List.length states in*)
+let automaton_to_aiger ?(prefix="") auto =
   let state_var = 
     IntSet.fold 
       (fun state accu -> 
-       IntMap.add state (var ("_state_"^string_of_int state) Type.bool)  accu
+       IntMap.add state (var (prefix^"_state_"^string_of_int state) Type.bool)  accu
       ) (states auto) IntMap.empty
   in
-  let init = var "init" Type.bool in
-  let accept = var "accept" Type.bool in
-
-  (*let fake_latch = var "fake" Type.bool in*)
+  let init = var (prefix^"_init") Type.bool in
+  let accept = var (prefix^"_accept") Type.bool in
 
   let acceptation = 
     List.fold_left 
@@ -526,22 +522,27 @@ let automaton_to_aiger auto =
     )
   in
 
-  let aig = Aiger.hide aig_trans ("accept",Some 0) in
+  let aig = Aiger.hide aig_trans (prefix^"_accept",Some 0) in
   let aig, no_accept =
     List.fold_left 
       (fun (aig,gate) s -> 
        let aig, v = Aiger.new_var aig in
-       let lit_state = Aiger.symbol2lit aig ("_state_"^string_of_int s,Some 0) in
+       let lit_state = Aiger.symbol2lit aig (prefix^"_state_"^string_of_int s,Some 0) in
        let aig = Aiger.add_and aig (Aiger.var2lit v) gate (Aiger.aiger_not lit_state) in
        aig, (Aiger.var2lit v)
       ) (aig,Aiger.aiger_true) auto.accept
   in
 
-  Aiger.add_output aig (Aiger.aiger_not no_accept) ("accept",None)
+  let aig,var = Aiger.new_var aig in
+  let lit = Aiger.var2lit var in
+  let aig = Aiger.add_and aig lit (Aiger.aiger_not no_accept) Aiger.aiger_true in
+
+  Aiger.add_output aig lit (prefix^"_accept",Some 0)
+  (*Aiger.add_output aig (Aiger.aiger_not no_accept) (prefix^"accept",Some 0)*)
 		 
 
 
-let to_aiger expr =
+let to_aiger ?(prefix="") expr =
   let auto = non_det_of_expr expr in
   Common.debug (automaton_to_string auto);
   let we_auto = remove_epsilon auto in
@@ -549,7 +550,7 @@ let to_aiger expr =
   let co_auto = coaccessible we_auto in
   Common.debug (automaton_to_string co_auto);
   Cudd.init 100;
-  automaton_to_aiger co_auto
+  automaton_to_aiger ~prefix co_auto
 
 let regexp string = to_aiger (of_string string)
 

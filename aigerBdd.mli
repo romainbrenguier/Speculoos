@@ -20,6 +20,7 @@ sig
   val next : t -> t
   val make_cube : t list -> Cudd.cube
   val to_int : t -> int
+  val to_string : t -> string
   val of_lit : Aiger.t -> Aiger.lit -> t
 end
 
@@ -30,7 +31,7 @@ module VariableSet : Set.S with type elt = Variable.t
 
 
 val map_of_aiger : Aiger.t -> Aiger.lit VariableMap.t
-
+val map_to_string : Aiger.lit VariableMap.t -> string
 
 (** Raised by [bdd_to_aiger] if one of the literals in the BDD is not already in the given aiger *)
 exception UndeclaredLit of Aiger.lit

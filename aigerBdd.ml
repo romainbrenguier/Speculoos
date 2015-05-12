@@ -19,6 +19,8 @@ module Variable =
 struct
   type t = int
 
+  let to_string v = "Variable("^string_of_int v^")"
+
   let compare a b = a - b
   let last_variable = ref 0
   let table_variable = Hashtbl.create 20
@@ -26,7 +28,7 @@ struct
     let i = !last_variable in
     last_variable := !last_variable + 2;
     Hashtbl.add table_variable symbol i;
-    (* (* Debug *) Printf.printf "new variable %s -> %d\n" (symbol_to_string symbol) i; *)
+    (*(* Debug *) Printf.printf "new variable %s -> %d\n" (symbol_to_string symbol) i; *)
     i
     
   let find (l:symbol) = 
@@ -60,12 +62,15 @@ let map_of_aiger aiger =
     List.fold_left
       (fun m inp -> 
        let sym = Aiger.lit2symbol aiger inp in
+       (* Printf.printf "adding to map input %d (%s)\n" (Aiger.lit2int inp) (Aiger.Symbol.to_string sym); *)
+
        VariableMap.add (Variable.find (of_aiger_symbol sym)) inp m
       ) VariableMap.empty aiger.Aiger.inputs
   in 
   List.fold_left
     (fun m (l,_) -> 
      let sym = Aiger.lit2symbol aiger l in
+     (*Printf.printf "adding to map latch %d (%s)\n" (Aiger.lit2int l) (Aiger.Symbol.to_string sym);*)
      VariableMap.add (Variable.find (of_aiger_symbol sym)) l m
     ) m aiger.Aiger.latches
 
@@ -92,7 +97,11 @@ let bdd_to_valuations bdd variables =
   then []
   else aux bdd [VariableMap.empty] variables
 
-
+let map_to_string map = 
+  VariableMap.fold 
+    (fun var lit accu -> 
+      accu^Variable.to_string var^" -> "^string_of_int (Aiger.lit2int lit)^"; "
+    ) map ""
 
 exception UndeclaredLit of Aiger.lit
 
@@ -114,7 +123,8 @@ let add_bdd_to_aiger aiger bdd v2l =
 	let variable = Cudd.nodeReadIndex bdd in
 	let lit = 
 	  try VariableMap.find variable v2l 
-	  with Not_found -> failwith ("In AigerBdd.add_bdd_to_aiger: variable "^string_of_int variable^" not found")
+	  with Not_found -> 
+	    failwith ("In AigerBdd.add_bdd_to_aiger: variable "^string_of_int variable^" not found in the given Aiger.lit VariableMap.t")
 	in
 	let then_child = Cudd.t bdd in
 	let else_child = Cudd.e bdd in

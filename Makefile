@@ -1,6 +1,6 @@
 
 
-all: simulation.byte synthax speculogSynth.byte
+all: simulation.byte synthax regularExpression.byte speculogSynth.byte
 
 synthax: 
 	ocamlbuild expression.cmx
@@ -10,11 +10,16 @@ synthax:
 	camlp4o pa_extend.cmo q_MLast.cmo pa_speculog.ml -o pa_speculog.ast
 	ocamlbuild pa_speculog.cmo
 
-matrix:
+matrix: 
+	mkdir matrix
 	ocamlbuild -tag use_ocaml-cudd -tag use_ocaml-aiger examples/matrix.byte --
 
-cycles:
-	ocamlbuild -tag use_ocaml-cudd -tag use_ocaml-aiger examples/scheduling.byte --
+
+_build/examples/scheduling.byte:
+	mkdir cycles; ocamlbuild -tag use_ocaml-cudd -tag use_ocaml-aiger examples/scheduling.byte --
+
+cycles: _build/examples/scheduling.byte
+
 
 
 simulation.byte: *.ml
