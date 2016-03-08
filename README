@@ -3,6 +3,8 @@ Speculoos is a set of tools for specification that can be converted to AIGER fil
 To install the tool, run:
    make
 
+Note that ocaml-cudd and ocaml-aiger need to be installed in the parent directory of Speculoos.
+
 To generate some examples, run:
    make cycles
    make matrix
