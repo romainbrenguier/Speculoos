@@ -4,6 +4,15 @@ To install the tool, run:
    make
 
 Note that ocaml-cudd and ocaml-aiger need to be installed in the parent directory of Speculoos.
+To install ocaml-aiger, go to the parent directory of Speculoos then enter the following commands:
+git clone https://github.com/romainbrenguier/ocaml-aiger.git
+cd ocaml-aiger 
+make
+To install ocaml-cudd, go to the parent directory of Speculoos then enter the following commands:
+git clone https://github.com/romainbrenguier/ocaml-cudd.git
+cd ocaml-cudd
+./install_cudd.sh
+make
 
 To generate some examples, run:
    make cycles

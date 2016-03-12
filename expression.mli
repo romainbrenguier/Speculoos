@@ -29,10 +29,16 @@ val to_expr : t -> unit Integer.t
     The first argument is a table and
     the second argument is the index of the element we want. *)
 val get : t -> t -> t
+(** Infix notation for get *)
+val ($@) : t -> t -> t
 val size : t -> int
+
+
 
 (** Should only be applied to tuples *)
 val field : t -> string -> t
+(** infix notation for field *)
+val ($.) : t -> string -> t
 
 (** Should only be applied to union types *)
 val match_with : Type.t -> t -> (string * (t -> t)) list -> t
@@ -60,8 +66,28 @@ val mult : t -> t -> t
 val div : t -> t -> t
 val modulo : t -> t -> t
 val next : t -> t
-
 val ite : t -> t -> t -> t
+
+(** {2 Succinct version of the operations} *)
+val ($!) : t -> t
+val ($=>) : t -> t -> t
+val ($<=>) : t -> t -> t
+val ($&) : t -> t -> t
+val ($^) : t -> t -> t
+val ($|) : t -> t -> t
+val ($=) : t -> t -> t
+val ($<=) : t -> t -> t
+val ($<) : t -> t -> t
+val ($>=) : t -> t -> t
+val ($>) : t -> t -> t
+val ( $<< ) : t -> int -> t
+val ( $>> ) : t -> int -> t
+val ($+) : t -> t -> t
+val ($-) : t -> t -> t
+val ($* ) : t -> t -> t
+val ($/) : t -> t -> t
+val ($%) : t -> t -> t
+val ($?) : t -> (t * t) -> t
 
 (* val apply : (unit Integer.t -> unit Integer.t -> unit Integer.t) -> t -> t -> t*)
 (** Should be applied to Boolean expressions *)
@@ -78,6 +104,9 @@ val of_int : Type.t -> t -> t
 val functional_synthesis : (t * t) list -> Aiger.t
 (** Add an initial configuration to the specifications. *)
 val init : (t * t) list -> (t * t) list -> (t * t) list
+
+(** Special notation for spec *)
+val ($<-) : t -> t -> (t * t)
 
 
 val rename : Aiger.t -> string -> Type.t -> string -> Aiger.t

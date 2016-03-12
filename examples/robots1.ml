@@ -4,6 +4,10 @@ open Expression
 
 let init_x = 10
 let init_y = 25
+let adv_min_x = 10
+let adv_min_y = 27
+let adv_init_x = 30
+let adv_init_y = 30
 
 (* use a format described in http://wiki.ros.org/map_server for describing the problem ? *)
 
@@ -58,34 +62,62 @@ let map,size_x,size_y =
   done;
   r,size_x,size_y
 
-
 let aiger = 
   let x = var "x" (Type.int 8) in
   let y = var "y" (Type.int 8) in
-  (* 0 means move to the left; 1 don't move on x; 2 move to the right *)
-  let dx = var "controllable_dx" (Type.int 2) in
-  let dy = var "controllable_dy" (Type.int 2) in
+  let adv_x = var "adv_x" (Type.int 8) in
+  let adv_y = var "adv_y" (Type.int 8) in
+  (* 0 means left; 1 up; 2 right; 3 down *)
+  let dir = var "controllable_dir" (Type.int 2) in
+  let adv_dir = var "adv_dir" (Type.int 2) in
+  (* the adversary can double the coordinates change *)
+  let double = var "double" (Type.int 1) in 
   let fail = var "fail" Type.bool in
   let spec = 
-    [
-      x, minus (add x dx) (int 1);
-      y, minus (add y dy) (int 1);
-      fail, disj (disj (equals dx (int 3)) (equals dy (int 3)))
-		 (for_some
-		    [0,size_x-1] 
-		    (fun i ->
-		     (for_some
-			[0,size_y-1] 
-			(fun j ->
-			 if map.{i,j} < 200
-			 then 
-			   ite (conj (equals x (int i)) (equals y (int j))) (bool true) (bool false)
-			 else bool false
-		     ))))
-    ]
+    init 
+      [x $<- int init_x; y $<- int init_y; 
+       adv_x $<- int adv_init_x; adv_y $<- int adv_init_y] 
+      [
+	adv_x $<-
+	((adv_dir $= int 0 $& (adv_x $> int adv_min_x)) $? 
+	      (adv_x $- int 1, 
+	       (adv_dir $= int 2 $& (adv_x $< int size_x)) $?
+		 (adv_x $+ int 1,
+		  adv_x))); 
+	adv_y $<-
+	((adv_dir $= int 1 $& (adv_y $> int adv_min_y)) $? 
+	      (adv_y $- int 1, 
+	       (adv_dir $= int 3 $& (adv_y $< int size_y)) $?
+		 (adv_y $+ int 1,
+		  adv_y))); 
+	x $<-
+	  ((dir $= int 0) $?
+	      (x $- int 1 $- double,
+	       (dir $= int 2) $?
+		 (x $+  int 1 $+ double, x)))
+	; 
+	y $<-
+	  ((dir $= int 1) $?
+	      (y $- int 1 $- double,
+	       (dir $= int 3) $?
+		 (y $+  int 1 $+ double,  y)))
+	;
+	fail $<-
+	  ((x $= adv_x $& (y $= adv_y))
+          $| (for_some
+		[0,size_x-1] 
+		(fun i ->
+		  (for_some
+		     [0,size_y-1] 
+		      (fun j ->
+			if map.{i,j} < 200
+			then 
+			  ((x $= int i) $& (y $= int j)) $? (bool true, bool false)
+			else bool false
+		      )))))
+      ]
   in 
-  let init_spec = init [x, int init_x; y, int init_y] spec in
-  functional_synthesis init_spec 
+  functional_synthesis spec 
 	     
 
 let main = 

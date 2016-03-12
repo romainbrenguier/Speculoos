@@ -254,10 +254,35 @@ let less_eq,less,greater_eq,greater =
   | [a;b;c;d] -> a,b,c,d
   | _ -> failwith "Wrong number of results"
 
+
+let ($@) = get
+let ($.) = field
+let ($!) = neg
+let ($=>) = implies
+let ($<=>) = equiv
+let ($&) = conj
+let ($|) = disj
+let ($^) = xor
+let ($=) = equals
+let ($<=) = less_eq
+let ($<) = less
+let ($>=) = greater_eq
+let ($>) = greater
+let ( $<< ) = left_shift
+let ( $>> ) = right_shift
+let ($+) = add
+let ($-) = minus
+let ($*) = mult
+let ($/) = div
+let ($%) = modulo
+
+
 let ite i t e =
   match i with 
   | EBool x -> apply (Integer.ite (Integer.cast x)) t e
   | _ -> failwith "In Expression.ite: the condition is not a Boolean"
+
+let ($?) i (t,e) = ite i t e
 
 let of_int typ a = 
   let rec aux rem = function
@@ -413,6 +438,10 @@ let match_with typ a patterns =
 	
   | _ -> failwith "In Expression.match_with: type is not a union"
   
+
+let ( $<- ) x update_x = (x, update_x)
+
+
 
 let init initial updates =
   (*let decl, initialized = reg "initialized" Bool in*)
