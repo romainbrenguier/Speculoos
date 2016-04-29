@@ -38,7 +38,7 @@ let input_inputs aiger =
 	  else
 	    ((*Printf.printf "%s[%d] = var %d\n" name i (AigerBdd.Variable.to_int (AigerBdd.Variable.find (name,i)));*)
 	     let new_state = 
-	       AigerBdd.VariableMap.add (AigerBdd.Variable.find (name,i)) ((b lsr i) mod 2 = 1) state
+	       AigerBdd.VariableMap.add (AigerBdd.Variable.find (AigerBdd.of_aiger_symbol (name,Some i))) ((b lsr i) mod 2 = 1) state
 	     in loop new_state (i+1))
 
 	in loop state 0
@@ -61,7 +61,7 @@ let main =
 	  let variables = 
 	    Array.mapi 
 	      (fun i lit -> 
-	       let v = AigerBdd.Variable.find (name,i) 
+		let v = AigerBdd.Variable.find (AigerBdd.of_aiger_symbol (name,Some i))
 					      (*try 
 		 with x -> if i = 0 then AigerBdd.Variable.find (name,None) else raise x*)
 	       in (v,false)

@@ -1,5 +1,7 @@
 type t = 
-  | EVar of string * int
+| ESimple of string
+| EVar of string * int
+| ESimpleNext of string
   | ENext of string * int
   | EExists of t list * t
   | EForall of t list * t
@@ -13,6 +15,8 @@ type t =
 val to_string : t -> string
 val var : string -> int -> t
 val next_var : string -> int -> t
+val simple : string -> t
+val next_simple : string -> t
 exception AlreadyNext of t
 val next : t -> t
     

@@ -6,8 +6,9 @@
     circuit that is provided. *)
 val init : Aiger.t -> unit
 
-type symbol = string * int
+type symbol = Aiger.Symbol.t
 val of_aiger_symbol : Aiger.Symbol.t -> symbol
+val to_aiger_symbol : symbol -> Aiger.Symbol.t
 module SymbolMap : Map.S with type key = symbol
 module SymbolSet : Set.S with type elt = symbol
 val symbol_to_string : symbol -> string

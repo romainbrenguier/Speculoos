@@ -1,7 +1,9 @@
 open Common
 
 type t = 
+| ESimple of string
 | EVar of string * int
+| ESimpleNext of string
 | ENext of string * int
 | EExists of t list * t
 | EForall of t list * t
@@ -13,8 +15,10 @@ type t =
 | False
 
 let rec to_string = function 
+  | ESimple s -> Printf.sprintf "%s" s
   | EVar (s,i) -> Printf.sprintf "%s.(%d)" s i
   | ENext (s,i) -> Printf.sprintf "next %s.(%d)" s i
+  | ESimpleNext s -> Printf.sprintf "next %s" s
   | EExists (list,e) -> Printf.sprintf "(exists [%s]. %s)" (to_string (EList list)) (to_string e)
   | EForall (list,e) -> Printf.sprintf "(forall [%s]. %s)" (to_string (EList list)) (to_string e)
   | ENot a -> Printf.sprintf "(not %s)" (to_string a)
@@ -32,12 +36,15 @@ let rec to_string = function
     
     
 let var s i = EVar (s,i)
+let simple s = ESimple s
 let next_var s i = ENext (s,i)
+let next_simple s = ESimpleNext s
   
 exception AlreadyNext of t
 let rec next e = match e with
+    | ESimple s -> ESimpleNext s
     | EVar (s,i) -> ENext (s,i)
-    | ENext(_,_) -> raise (AlreadyNext e)
+    | ENext(_,_) | ESimpleNext _ -> raise (AlreadyNext e)
     | EExists (el,e) -> EExists (List.map next el, next e)
     | EForall (el,e) -> EForall (List.map next el, next e)
     | ENot x -> ENot (next x)
@@ -136,25 +143,38 @@ let of_bdd bdd symbols =
     in aux [] *)
     
   let aux bdd_expr_list (name,opt) = 
-    let var = AigerBdd.Variable.find (name,opt) in
+    let var = AigerBdd.Variable.find (AigerBdd.of_aiger_symbol (name,opt)) in
     BddMap.fold 
       (fun bdd expr accu->
 	let var_bdd = AigerBdd.Variable.to_bdd var in
 	let t = Cudd.bddRestrict bdd var_bdd in
-	let expr_t = conjunction expr (EVar (name,opt)) in
-        let e = Cudd.bddRestrict bdd (Cudd.bddNot var_bdd) in
-	let expr_e = conjunction expr (ENot (EVar (name,opt))) in
+	match opt with 
+	| Some i ->
+	  let expr_t = conjunction expr (EVar (name,i)) in
+          let e = Cudd.bddRestrict bdd (Cudd.bddNot var_bdd) in
+	  let expr_e = conjunction expr (ENot (EVar (name,i))) in
 	
-	if Cudd.compare e t = 0
-	then insert e expr accu 
-	else
-	  let accu = insert t expr_t accu in
-	  let accu = insert e expr_e accu in
-	  accu
+	  if Cudd.compare e t = 0
+	  then insert e expr accu 
+	  else
+	    let accu = insert t expr_t accu in
+	    let accu = insert e expr_e accu in
+	    accu
+	| None ->
+	  let expr_t = conjunction expr (ESimple name) in
+          let e = Cudd.bddRestrict bdd (Cudd.bddNot var_bdd) in
+	  let expr_e = conjunction expr (ENot (ESimple name)) in
+	
+	  if Cudd.compare e t = 0
+	  then insert e expr accu 
+	  else
+	    let accu = insert t expr_t accu in
+	    let accu = insert e expr_e accu in
+	    accu
       )  bdd_expr_list BddMap.empty
   in 
     
-  let res = List.fold_left aux  (BddMap.add bdd True BddMap.empty) symbols (*[bdd,True]*) in
+  let res = List.fold_left aux (BddMap.add bdd True BddMap.empty) (List.map AigerBdd.to_aiger_symbol symbols) (*[bdd,True]*) in
   try BddMap.find (Cudd.bddTrue()) res
   with _ -> failwith "in [of_bdd]: missing variables"
       

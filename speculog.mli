@@ -12,10 +12,10 @@ val of_declaration : declaration list -> declaration AigerBdd.SymbolMap.t
 
 
 (** arguments are the name and the size of the variable *)
-val input : string -> int -> declaration * 'a Integer.t
-val output : string -> int -> declaration * 'a Integer.t
-val reg : string -> int -> declaration * 'a Integer.t
-val wire : string -> int -> declaration * 'a Integer.t
+val input : string -> int option -> declaration * 'a Integer.t
+val output : string -> int option -> declaration * 'a Integer.t
+val reg : string -> int option -> declaration * 'a Integer.t
+val wire : string -> int option -> declaration * 'a Integer.t
 
 
 module Constraint : 

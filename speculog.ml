@@ -5,6 +5,11 @@ type declaration =
 | Wire of AigerBdd.symbol
 | DList of declaration list
 
+let decl_input s = Input (AigerBdd.of_aiger_symbol s)
+let decl_output s = Output (AigerBdd.of_aiger_symbol s)
+let decl_reg s = Reg (AigerBdd.of_aiger_symbol s)
+let decl_wire s = Wire (AigerBdd.of_aiger_symbol s)
+  
 
 let rec add_declaration types declaration = match declaration with 
   | DList dl ->
@@ -69,7 +74,7 @@ let wires types =
 let make_vector f name i = 
   let rec aux accu k = 
     if k < 0 then accu
-    else aux (f (name,k) :: accu) (k-1)
+    else aux (f (name,Some k) :: accu) (k-1)
   in aux [] (i-1)
 
 
@@ -80,22 +85,31 @@ let iter start last f x =
 
 
 let var = Integer.var
+let simple name = Integer.of_boolean (Boolean.simple name)
 
-let input name size = 
-  DList (make_vector (fun x -> Input x) name size),
-  var name size
+let input name = function
+  | Some size ->
+    DList (make_vector (fun x -> decl_input x) name size),
+    var name size
+  | None -> decl_input (name,None), simple name
     
-let output name size = 
-  DList (make_vector (fun x -> Output x) name size),
-  var name size
+let output name = function
+  | Some size ->
+    DList (make_vector (fun x -> decl_output x) name size),
+    var name size
+  | None -> decl_output (name,None), simple name
 
-let reg name size = 
-  DList (make_vector (fun x -> Reg x) name size),
-  var name size
+let reg name = function
+  | Some size ->
+    DList (make_vector (fun x -> decl_reg x) name size),
+    var name size
+  | None -> decl_reg (name,None), simple name
 
-let wire name size = 
-  DList (make_vector (fun x -> Wire x) name size),
-  var name size
+let wire name = function
+  | Some size ->
+    DList (make_vector (fun x -> decl_wire x) name size),
+    var name size
+  | None -> decl_wire (name,None), simple name
 
 
 
@@ -109,15 +123,18 @@ struct
     List.fold_left (fun accu x -> Cudd.bddAnd accu x) (Cudd.bddTrue()) cl
 
   let rec of_expr expr = match expr with
-    | Boolean.EVar (x,i) -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.find (x,i))
-    | Boolean.ENext (x,i) -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.next (AigerBdd.Variable.find (x,i)))
+    | Boolean.EVar (x,i) -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.find (x,Some i))
+    | Boolean.ESimple x -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.find (x,None))
+    | Boolean.ENext (x,i) -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.next (AigerBdd.Variable.find (x,Some i)))
+    | Boolean.ESimpleNext x -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.next (AigerBdd.Variable.find (x,None)))
 
     | Boolean.EForall (vl,e) -> 
       let variables = 
 	List.fold_left
 	  (fun accu e -> 
 	   match e with 
-	   | Boolean.EVar (x,i) -> AigerBdd.Variable.find (x,i) :: accu
+	   | Boolean.EVar (x,i) -> AigerBdd.Variable.find (x,Some i) :: accu
+	   | Boolean.ESimple x -> AigerBdd.Variable.find (x,None) :: accu
 	   | _ -> failwith "In Speculog.Constraint.of_expr: universal quantification on expressions that are not variables"
 	  ) [] vl 
       in
@@ -129,7 +146,8 @@ struct
       List.fold_left
 	(fun accu e -> 
 	 match e with 
-	 | Boolean.EVar (x,i) -> AigerBdd.Variable.find (x,i) :: accu
+	 | Boolean.EVar (x,i) -> AigerBdd.Variable.find (x,Some i) :: accu
+	 | Boolean.ESimple x -> AigerBdd.Variable.find (x,None) :: accu
 	 | _ -> failwith "In Speculog.Constraint.of_expr: existential quantification on expressions that are not variables"
 	) [] vl 
     in
@@ -178,21 +196,21 @@ let add_synthesized declarations constraints aiger =
   let decl = 
     List.fold_left 
       (fun decl n -> 
-	let d, _ = input n (Aiger.size_symbol aiger n) in
+	let d, _ = input n (Some (Aiger.size_symbol aiger n)) in
 	d :: decl
       ) decl inputs
   in
   let decl = 
     List.fold_left 
       (fun decl n -> 
-	let d, _ = reg n (Aiger.size_symbol aiger n) in
+	let d, _ = reg n (Some (Aiger.size_symbol aiger n)) in
 	d :: decl
       ) decl latches
   in
   let decl = 
     List.fold_left 
       (fun decl n -> 
-	let d, _ = output n (Aiger.size_symbol aiger n) in
+	let d, _ = output n (Some (Aiger.size_symbol aiger n)) in
 	d :: decl
       ) decl outputs
   in
@@ -210,15 +228,17 @@ module SymbolSet = AigerBdd.SymbolSet
 
 let names_in_boolean_expr expr = 
   let rec aux accu = function 
-    | Boolean.EVar (name,i) | Boolean.ENext (name,i) -> SymbolSet.add (name,i) accu 
+    | Boolean.EVar (name,i) | Boolean.ENext (name,i) -> SymbolSet.add (name,Some i) accu 
+    | Boolean.ESimple name | Boolean.ESimpleNext name -> SymbolSet.add (name,None) accu 
 								      
     | Boolean.EExists (tl,e) 
     | Boolean.EForall(tl,e) -> (* Variables in tl should be removed *)
-       List.fold_left
-	 (fun accu -> function 
-		   | Boolean.EVar (name,i) -> SymbolSet.remove (name,i) accu
-		   | _ -> failwith "In Speculog.names_in_boolean_expr: quantification over an expression that is not a variables"
-	 ) (aux accu e) tl
+      List.fold_left
+	(fun accu -> function 
+	| Boolean.EVar (name,i) -> SymbolSet.remove (name,Some i) accu
+	| Boolean.ESimple name -> SymbolSet.remove (name,None) accu
+	| _ -> failwith "In Speculog.names_in_boolean_expr: quantification over an expression that is not a variables"
+	) (aux accu e) tl
     | Boolean.ENot t -> aux accu t
     | Boolean.EAnd tl | Boolean.EOr tl 
     | Boolean.EList tl -> List.fold_left aux accu tl
@@ -271,11 +291,17 @@ let functional_synthesis (*declarations*) updates =
 	    (fun (lb,ob,i) b_var ->
 	      match b_var with 
 	      | Boolean.EVar (s,io) -> 
-		 if SymbolSet.mem (s,io) latches
-		 then (((s,io),Constraint.of_expr (Integer.get expr i))::lb,ob,i+1)
-		 else if SymbolSet.mem (s,io) outputs
-		 then (lb,((s,io),Constraint.of_expr (Integer.get expr i))::ob,i+1)
-		 else failwith ("In Speculog.functional_synthesis: the variable "^s^" is neither a latch nor an output")
+		if SymbolSet.mem (s,Some io) latches
+		then (((s,Some io),Constraint.of_expr (Integer.get expr i))::lb,ob,i+1)
+		else if SymbolSet.mem (s,Some io) outputs
+		then (lb,((s,Some io),Constraint.of_expr (Integer.get expr i))::ob,i+1)
+		else failwith ("In Speculog.functional_synthesis: the variable "^s^" is neither a latch nor an output")
+	      | Boolean.ESimple s -> 
+		if SymbolSet.mem (s,None) latches
+		then (((s,None),Constraint.of_expr (Integer.get expr i))::lb,ob,i+1)
+		else if SymbolSet.mem (s,None) outputs
+		then (lb,((s,None),Constraint.of_expr (Integer.get expr i))::ob,i+1)
+		else failwith ("In Speculog.functional_synthesis: the variable "^s^" is neither a latch nor an output")
 	      | _ -> failwith "In Speculog.functional_synthesis: the expression on the left should be a variable"
 	    ) (lb,ob,0) ba_var 
 	in lb,ob

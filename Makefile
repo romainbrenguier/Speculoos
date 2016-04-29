@@ -1,8 +1,8 @@
 
 
-all: simulation.byte synthax regularExpression.byte speculogSynth.byte
+all: pa_speculog.cmo simulation.byte regularExpression.byte speculogSynth.byte
 
-synthax: 
+pa_speculog.cmo: 
 	ocamlbuild expression.cmx
 	ocamlbuild speculog.cmx
 	ocamlbuild aigerBdd.cmx

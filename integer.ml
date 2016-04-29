@@ -55,6 +55,8 @@ let get_expr a j = of_boolean (get a j)
 let var name size = 
   make None (Array.init size (fun i -> Boolean.var name i))
 
+let bool_var name = 
+  of_boolean (Boolean.simple name)
 
 let size_max l = 
   let rec aux accu = function | [] -> accu | a :: l -> aux (max accu (Array.length (snd a))) l

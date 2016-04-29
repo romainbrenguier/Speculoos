@@ -5,12 +5,12 @@ let init aiger =
   try Cudd.init (aiger.Aiger.num_inputs+2*aiger.Aiger.num_latches+2)
   with Failure x -> Printf.eprintf "warning: %s\n" x
 
-type symbol = string * int
-let of_aiger_symbol = function
+type symbol = Aiger.Symbol.t (*string * int*)
+let of_aiger_symbol x = x (*function
   | name, Some i -> name, i
-  | name, None -> name, 0
-let to_aiger_symbol (n,i) = n,Some i
-let symbol_to_string (n,i) = n^"<"^string_of_int i^">"
+  | name, None -> name, 0*)
+let to_aiger_symbol x = x (* (n,i) = n,Some i*)
+let symbol_to_string = Aiger.Symbol.to_string (* (n,i) = n^"_"^string_of_int i^"_"*)
 
 module SymbolMap = Map.Make(struct type t = symbol let compare = compare end)
 module SymbolSet = Set.Make(struct type t = symbol let compare = compare end)
@@ -332,18 +332,19 @@ let compute_updates aiger =
      let litterals = Aiger.name_to_literals aiger name in
      Array.iteri 
        (fun i lit ->
-	(* Warning: several output can have the same litteral *)
-	try Hashtbl.add updates (Variable.find (name,i)) (Hashtbl.find gate_bdd lit)
-	with Not_found  -> 
-	  (*if i = 0 then 
-	    try Hashtbl.add updates (Variable.find (name,None)) (Hashtbl.find gate_bdd lit)
-	    with Not_found  -> *)
-	  (*else raise Not_found*)
-	  Printf.eprintf "gate %d not found\n" (Aiger.lit2int lit);
-	  raise Not_found
+	 (* Warning: several output can have the same litteral *)
+	 try Hashtbl.add updates (Variable.find (name,Some i)) (Hashtbl.find gate_bdd lit)
+	 with Not_found  -> 
+	   try
+	     if i = 0 then 
+	       Hashtbl.add updates (Variable.find (name,None)) (Hashtbl.find gate_bdd lit)
+	     else raise Not_found
+	   with Not_found ->
+	     Printf.eprintf "gate %d not found\n" (Aiger.lit2int lit);
+	     raise Not_found
        ) litterals
     ) (Aiger.outputs aiger);
-
+  
   updates
 
 
@@ -398,9 +399,18 @@ let print_valuation aiger names valuation =
       let value = ref 0 in
       for i = size - 1 downto 0 do
 	(value := 2 * !value + 
-		    (if VariableMap.find (Variable.find (name,i)) valuation
-	    then 1 else 0));
-	(*Printf.printf "%s.(%d) (= var %d): %b\n" name i (Variable.to_int (Variable.find (name,i))) (VariableMap.find (Variable.find (name,i)) valuation);*)
+	   (
+	     try 
+	       if VariableMap.find (Variable.find (name,Some i)) valuation
+	       then 1 else 0
+	     with Not_found ->
+	       if i = 0 
+	       then 
+		 if VariableMap.find (Variable.find (name,None)) valuation
+		 then 1 else 0
+	       else raise Not_found
+	   ));
+      (*Printf.printf "%s.(%d) (= var %d): %b\n" name i (Variable.to_int (Variable.find (name,i))) (VariableMap.find (Variable.find (name,i)) valuation);*)
 	
       done;
       Printf.printf "%s = %d\n" name !value
@@ -415,8 +425,12 @@ let initial_state aiger =
 	 let variables = 
 	   Array.mapi 
 	     (fun i lit -> 
-	       let v = Variable.find (name,i) 
-	       in (v,false)
+	       try
+		 let v = Variable.find (name, Some i) 
+		 in (v,false)
+	       with Not_found ->
+		 if i = 0 then (Variable.find (name,None), false)
+		 else raise Not_found
 	     ) literals
 	 in List.rev_append (Array.to_list variables) accu
        ) [] (List.rev_append (Aiger.latches aiger) (Aiger.outputs aiger))

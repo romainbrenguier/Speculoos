@@ -23,7 +23,7 @@ let to_string =
 let var name typ = 
   let rec aux prefix = function
     | Type.Unit -> EUnit
-    | Type.Bool -> EBool (Integer.var prefix 1)
+    | Type.Bool -> EBool (Integer.bool_var prefix)
     | Type.Int i -> EInt (Integer.var prefix i)
 
     | Type.Array (t,i) -> 
@@ -57,8 +57,8 @@ let var name typ =
 let make decl name typ = 
   let rec aux prefix = function
     | Type.Unit -> [],EUnit
-    | Type.Bool -> let d,v = decl prefix 1 in [d],EBool v
-    | Type.Int i -> let d,v = decl prefix i in [d],EInt v
+    | Type.Bool -> let d,v = decl prefix None in [d],EBool v
+    | Type.Int i -> let d,v = decl prefix (Some i) in [d],EInt v
 
     | Type.Array (t,i) -> 
       let dv_array = 

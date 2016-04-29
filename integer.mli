@@ -18,6 +18,7 @@ val get : 'a t -> int -> Boolean.t
 val get_expr : 'a t -> int -> 'a t
 val size : 'a t -> int
 val var : string -> int -> 'a t
+val bool_var : string -> 'a t
 
 
 (** Bitwise negation. *)
