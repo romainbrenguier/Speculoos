@@ -31,6 +31,12 @@ speculogSynth.byte: *.ml
 regularExpression.byte: *.ml
 	ocamlbuild regularExpression.byte
 
+acacia2aig.native: *.ml
+	ocamlbuild -tag use_camlp4 -tag camlp4o -tag use_ocaml-cudd -tag use_ocaml-aiger examples/acacia2aig.native
+
+acacia2aig.byte: *.ml
+	ocamlbuild -tag use_camlp4 -tag camlp4o -tag use_ocaml-cudd -tag use_ocaml-aiger examples/acacia2aig.byte
+
 clean:
 	ocamlbuild -clean
 	rm -f *.ppo *.ppr *.ast

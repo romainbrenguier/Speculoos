@@ -1,5 +1,7 @@
 (* To compile this file use: 
-   ./speculog.sh examples/acacia2aig.ml *)
+   ocamlbuild -tag camlp4 -tag use_ocaml-cudd -tag use_ocaml-aiger acacia2aig.byte
+*)
+open Speculog
 open Expression
 
 let lexer = Genlex.make_lexer ["State"; "initial"; ":"; "("; ")"; ","; "!"; "&&"; "U"; "||"; "{"; "}"; "to"; "state"; "labeled"]

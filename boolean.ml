@@ -110,17 +110,23 @@ let conjunction a b = match a , b with
       else EAnd [EOr a; EOr b]
     | a, b -> if a = b then a else if a = ENot b || ENot a = b then False else EAnd [a;b]
 	
-    
+
 let xor a b = disjunction (conjunction a (negation b)) (conjunction (negation a) b)
-  
 let equality a b = disjunction (conjunction a b) (conjunction (negation a) (negation b))
-  
+
+
 let implication a b = disjunction b (negation a)
   
 let for_each list f =
   let treat_one (start,last) =
     of_list (iter start last (fun i c -> (f i) :: c) [])
   in of_list (List.map treat_one list)
+
+let ( $& ) = conjunction    
+let ( $| ) = disjunction
+let ( $= ) = equality
+let ( $^ ) = xor
+let ( $=> ) = implication
   
 module BddMap = Map.Make(struct type t = Cudd.bdd let compare = Cudd.compare end)
 
@@ -180,3 +186,18 @@ let of_bdd bdd symbols =
       
 
 
+let rec add_to_aiger aiger = function
+  | ESimple s -> aiger, Aiger.symbol2lit aiger (s,None)
+  | ENot t -> 
+    let (a,v) = add_to_aiger aiger t in 
+    (a,Aiger.aiger_not v)
+  | EAnd [t] ->  add_to_aiger aiger t 
+  | EAnd (hd :: tl) -> 
+    let (a,v) = add_to_aiger aiger hd in
+    let (b,w) = add_to_aiger a (EAnd tl) in
+    let c,x = Aiger.new_var b in 
+    let lx = Aiger.var2lit x in
+    Aiger.add_and c lx v w, lx
+  | EOr list -> add_to_aiger aiger (ENot (EAnd (List.map (fun x -> ENot x) list)))
+  | x -> failwith ("in Boolean.add_to_aiger: unexpected expression : "^to_string x)
+	      

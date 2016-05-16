@@ -272,9 +272,9 @@ let ( $<< ) = left_shift
 let ( $>> ) = right_shift
 let ($+) = add
 let ($-) = minus
-let ($*) = mult
-let ($/) = div
-let ($%) = modulo
+let ( $* ) = mult
+let ( $/ ) = div
+let ( $% ) = modulo
 
 
 let ite i t e =
