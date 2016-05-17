@@ -20,6 +20,8 @@ val size : 'a t -> int
 val var : string -> int -> 'a t
 val bool_var : string -> 'a t
 
+(** Select the bits given by the list, each pairs corresponding to an interval. *)
+val select : 'a t -> (int * int) list -> 'a t
 
 (** Bitwise negation. *)
 val neg : 'a t -> 'a t 

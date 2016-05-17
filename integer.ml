@@ -18,7 +18,6 @@ let of_array array =
   (None,Array.init (Array.length array) (fun i -> if array.(i) then Boolean.True else Boolean.False))
 
 
-
 let int a = 
   let size = log a in
   let array = 
@@ -32,6 +31,35 @@ let size a = Array.length (to_boolean_array a)
 
 let get a j = 
   if j >= size a || j < 0 then Boolean.False else (to_boolean_array a).(j) 
+
+
+let select array list =
+  let size = 
+    let rec aux s = function 
+      | [] -> s
+      | (a,b) :: tl -> if a >= b then aux (s+1+a-b) tl else aux (s+b+1-a) tl
+    in aux 0 list
+  in
+  let tab = Array.make size Boolean.False in
+  let pos = ref 0 in
+  let rec aux accu = function 
+    | [] -> ()
+    | (a,b) :: tl ->
+      if a >= b 
+      then 
+	for i = b to a 
+	do 
+	  tab.(!pos) <- get array i;
+	  incr pos
+	done
+      else
+	for i = a to b 
+	do 
+	  tab.(!pos) <- get array i;
+	  incr pos
+	done;
+  in make None tab
+
 
 exception NonBoolean of (unit t)
 
