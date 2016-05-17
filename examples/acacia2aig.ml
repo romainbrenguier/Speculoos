@@ -4,7 +4,7 @@
 open Speculog
 open Expression
 
-let lexer = Genlex.make_lexer ["State"; "initial"; ":"; "("; ")"; ","; "!"; "&&"; "U"; "||"; "{"; "}"; "to"; "state"; "labeled"]
+let lexer = Genlex.make_lexer ["State"; "initial"; ":"; "("; ")"; ","; "!"; "&&"; "U"; "T"; "||"; "{"; "}"; "to"; "state"; "labeled"]
 
 
 let parse = 
@@ -20,6 +20,7 @@ let parse =
     | [< 'Genlex.Kwd "!"; e = parse_var_conjunction; f = parse_remainder_conjunction ((false,e)::accu) >] ->  f
     | [< e = parse_var_conjunction; f = parse_remainder_conjunction ((true,e)::accu) >] ->  f
   and parse_var_conjunction = parser
+      | [< 'Genlex.Kwd "T" >] -> Expression.bool true
       | [< 'Genlex.Ident v >] ->  
 	try Hashtbl.find tab_variables v 
 	with Not_found -> 
@@ -32,6 +33,7 @@ let parse =
   in
 
   let parse_implication = parser
+    | [< 'Genlex.Kwd "T"; 'Genlex.Kwd "U"; 'Genlex.Kwd "("; f = parse_conjunction []; 'Genlex.Kwd ")" >] -> ([true,Expression.bool true],f)
     | [< 'Genlex.Kwd "("; e = parse_conjunction [] ; 'Genlex.Kwd ")"; 'Genlex.Kwd "U"; 'Genlex.Kwd "("; f = parse_conjunction []; 'Genlex.Kwd ")" >] -> (e,f)
   in
 

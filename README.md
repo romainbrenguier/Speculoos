@@ -7,15 +7,15 @@ Speculoos (Specification Logics for Synthesis) is a set of tools for specificati
 To install the tool, ocaml-cudd and ocaml-aiger need to be installed in the parent directory of Speculoos.
 To install ocaml-aiger, go to the parent directory of Speculoos then enter the following commands:
 > git clone https://github.com/romainbrenguier/ocaml-aiger.git
-> cd ocaml-aiger 
-> make
+> && cd ocaml-aiger 
+> && make
 
 
 To install ocaml-cudd, go to the parent directory of Speculoos then enter the following commands:
 > git clone https://github.com/romainbrenguier/ocaml-cudd.git
-> cd ocaml-cudd
-> ./install_cudd.sh
-> make
+> && cd ocaml-cudd
+> && ./install_cudd.sh
+> && make
 
 When this is done run:
 > make
@@ -23,9 +23,9 @@ When this is done run:
 
 To generate some examples, run:
 > make cycles
-> make matrix
+> && make matrix
 
-## Compiling with Speculoog
+## Compiling with Speculoos
 
 We recommend using ocamlbuild. For instance the command:
 > ocamlbuild -tag use_ocaml-cudd -tag use_ocaml-aiger examples/rising_edge.native --
