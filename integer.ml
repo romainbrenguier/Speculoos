@@ -152,7 +152,6 @@ let ite i t e =
   let condition = make None (Array.make size boolean) in*)
   let a = Array.init size (fun i -> Boolean.disjunction (Boolean.conjunction c (get t i)) (Boolean.conjunction (Boolean.negation c) (get e i))) 
   in 
-  let a = Array.init size (fun i -> (get t i))  in
   make None a
     
 let for_each bounds f =

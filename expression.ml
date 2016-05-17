@@ -476,11 +476,9 @@ let initialize initial updates =
 let functional_synthesis t2list =
   let tab = Hashtbl.create 100 in
   let add_when condition x up = 
-
-    try Hashtbl.add tab x (ite condition up (Hashtbl.find tab x))
+    try Hashtbl.replace tab x (ite condition up (Hashtbl.find tab x))
     with Not_found -> 
       Hashtbl.add tab x (ite condition up (bool false))
-	
   in
   let rec aux condition = function
     | When (a,b) -> List.iter (aux (a $& condition)) b
@@ -504,8 +502,7 @@ let functional_synthesis t2list =
   let finalize = function x, EInt y | x, EBool y -> x,y in
 
   List.iter (aux (bool true)) t2list;
-  let list = 
-    Hashtbl.fold (fun x up accu -> (x,up) :: accu) tab [] in
+  let list = Hashtbl.fold (fun x up accu -> (x,up) :: accu) tab [] in
   Speculog.functional_synthesis (List.map finalize list)
 
 let compile ?(init=[]) ?(filename="") a =
@@ -593,7 +590,7 @@ let remove_input aiger inp =
   }
   
 let set_latch aiger lit output =
-  let update = List.assoc lit aiger.Aiger.latches in
+  (* let update = List.assoc lit aiger.Aiger.latches in*)
   Common.debug (Printf.sprintf "setting latch %d -> %d\n" (Aiger.lit2int lit) (Aiger.lit2int output));
   (*let aiger =
     match Aiger.lit2tag aiger update with

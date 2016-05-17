@@ -108,7 +108,7 @@ let to_speculog transition_system =
       Expression.ite e (Expression.int k) accu) tab (Expression.int 0)
   in
   
-  Hashtbl.fold (fun k e accu -> (k,e) :: accu) output_tab  [state, update_state]
+  Hashtbl.fold (fun k e accu -> Update(k,e) :: accu) output_tab  [Update (state, update_state)]
     
       
 

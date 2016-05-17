@@ -5,7 +5,8 @@ let x = var "x" Type.bool
 let previous = var "previous" Type.bool 
 let _ = compile 
   [
-    Update(Var.bool "rising_edge", x $& neg previous); 
+    Update(Var.bool "rising_edge", bool false); 
+    When(neg previous, [Update(Var.bool "rising_edge", x)]); 
     Update(previous, x)
   ]
 
