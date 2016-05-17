@@ -3,5 +3,9 @@ open Expression
 
 let x = var "x" Type.bool 
 let previous = var "previous" Type.bool 
-let _ = compile [var "rising_edge" Type.bool, x $& neg previous; previous $<- x]
+let _ = compile 
+  [
+    Update(Var.bool "rising_edge", x $& neg previous); 
+    Update(previous, x)
+  ]
 

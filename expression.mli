@@ -101,18 +101,25 @@ val for_some : (int * int) list -> (int -> t) -> t
 val to_string : t -> string 
 val to_int : Type.t -> t -> t
 val of_int : Type.t -> t -> t
+
+(** {2 Updates} *)
+type instruction = 
+| Update of (t * t)
+| When of (t * instruction list)
+| If of (t * instruction list * instruction list)
+
+(** Special notation for updates *)
+val ($<-) : t -> t -> instruction
   
 (** {2 Synthesis } *)
 
-val functional_synthesis : (t * t) list -> Aiger.t
+val functional_synthesis : instruction list -> Aiger.t
 (** Add an initial configuration to the specifications. *)
-val initialize : (t * t) list -> (t * t) list -> (t * t) list
+val initialize : (t * t) list -> instruction list -> instruction list
 
 (** If no filename is provided the aiger file is produced on the standard output *)
-val compile : ?init:(t * t) list -> ?filename:string -> (t * t) list -> unit
+val compile : ?init:(t * t) list -> ?filename:string -> instruction list -> unit
 
-(** Special notation for spec *)
-val ($<-) : t -> t -> (t * t)
 
 
 val rename : Aiger.t -> string -> Type.t -> string -> Aiger.t

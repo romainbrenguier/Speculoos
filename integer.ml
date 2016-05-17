@@ -47,7 +47,7 @@ let select array list =
     | (a,b) :: tl ->
       if a >= b 
       then 
-	for i = b to a 
+	for i = a downto b 
 	do 
 	  tab.(!pos) <- get array i;
 	  incr pos
@@ -148,9 +148,12 @@ let (++) a b = add a b
 
 let ite i t e =
   let size = size_max [t ; e ]  in
-  let boolean = to_boolean i in
-  let condition = make None (Array.make size boolean) in
-  ((condition && t) or ((not condition) && e))
+  let c = to_boolean i in(*
+  let condition = make None (Array.make size boolean) in*)
+  let a = Array.init size (fun i -> Boolean.disjunction (Boolean.conjunction c (get t i)) (Boolean.conjunction (Boolean.negation c) (get e i))) 
+  in 
+  let a = Array.init size (fun i -> (get t i))  in
+  make None a
     
 let for_each bounds f =
   let b = Boolean.for_each bounds (fun x -> to_boolean (f x)) in

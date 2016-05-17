@@ -42,7 +42,7 @@ val add_synthesized : declaration list -> bool Integer.t -> Aiger.t -> Aiger.t
 val constraint_synthesis : declaration list -> bool Integer.t list -> Aiger.t
 
 (** Synthesize from the definition of how each variable should be updated.
-    The expression on the right should be an output or a register.
+    The expression on the left should be an output or a register.
     Warning: if the expression on the right has size greater than the variable on the left, then its result is truncated. 
 *)
 val functional_synthesis : ('a Integer.t * 'a Integer.t) list -> Aiger.t

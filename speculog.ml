@@ -247,14 +247,16 @@ let names_in_boolean_expr expr =
 
 let names_in_expr expr = 
   let arr = Integer.to_boolean_array expr in
-  Array.fold_left (fun accu i -> SymbolSet.union accu (names_in_boolean_expr i)) SymbolSet.empty arr
+  Array.fold_left (fun accu i -> 
+    SymbolSet.union accu (names_in_boolean_expr i)) SymbolSet.empty arr
 
 let types_of_updates updates = 
   let read,write =
     List.fold_left 
       (fun (read,write) (var,expr) ->
-       SymbolSet.union (names_in_expr expr) read,
-       SymbolSet.union (names_in_expr var) write
+	let to_read = names_in_expr expr in
+	let to_write = names_in_expr var in
+	SymbolSet.union to_read read, SymbolSet.union to_write write
       ) (SymbolSet.empty,SymbolSet.empty) updates     
   in
   let latches,inputs = 
@@ -269,12 +271,12 @@ let types_of_updates updates =
        if SymbolSet.mem s read then o else SymbolSet.add s o
       )  write SymbolSet.empty
   in
-(* (* Debug *)
+  (*(* Debug *)
   print_endline "registers:";
-  SymbolSet.iter (fun (s,i) -> Printf.printf "%s<%d> ; " s i) latches;
+  SymbolSet.iter (fun (s,i) -> Printf.printf "%s<%d> ; " s (match i with None -> 0 | Some x -> x)) latches;
   print_newline ();
   print_endline "inputs:";
-  SymbolSet.iter (fun (s,i) -> Printf.printf "%s<%d> ; " s i) inputs;
+  SymbolSet.iter (fun (s,i) -> Printf.printf "%s<%d> ; " s (match i with None -> 0 | Some x -> x)) inputs;
   print_newline ();*)
   inputs,outputs,latches
 
