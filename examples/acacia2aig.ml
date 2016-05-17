@@ -7,6 +7,9 @@ open Expression
 let lexer = Genlex.make_lexer ["State"; "initial"; ":"; "("; ")"; ","; "!"; "&&"; "U"; "T"; "||"; "{"; "}"; "to"; "state"; "labeled"]
 
 
+let expr_of_conjunction =
+  List.fold_left (fun e (b,x) -> if b then e $& x else e $& neg x) (Expression.bool true)
+
 let parse = 
   let tab_variables = Hashtbl.create 10 in
   
@@ -19,6 +22,7 @@ let parse =
   let rec parse_conjunction accu = parser
     | [< 'Genlex.Kwd "!"; e = parse_var_conjunction; f = parse_remainder_conjunction ((false,e)::accu) >] ->  f
     | [< e = parse_var_conjunction; f = parse_remainder_conjunction ((true,e)::accu) >] ->  f
+    | [< 'Genlex.Kwd "("; e = parse_conjunction [] ; 'Genlex.Kwd ")";  f = parse_remainder_conjunction (List.rev_append e accu)>] -> f
   and parse_var_conjunction = parser
       | [< 'Genlex.Kwd "T" >] -> Expression.bool true
       | [< 'Genlex.Ident v >] ->  
@@ -29,6 +33,7 @@ let parse =
 	  var
   and parse_remainder_conjunction accu = parser
       | [< 'Genlex.Kwd "&&"; e = parse_conjunction accu >] -> e
+      | [< 'Genlex.Kwd "||"; e = parse_conjunction [] >] -> [true, Expression.disj (expr_of_conjunction accu) (expr_of_conjunction e)]
       | [< >] -> accu
   in
 
@@ -78,7 +83,7 @@ let to_speculog transition_system =
       List.iter
 	(fun (target,update_list) ->
 	  List.iter (fun (inputs,outputs) ->
-	    let expr = List.fold_left (fun e (b,x) -> if b then e $& x else e $& neg x) (Expression.bool true) inputs in
+	    let expr = expr_of_conjunction inputs in
 	    let s_and_expr = expr $& (state $= Expression.int s) in
 	    List.iter (fun (pos,out) ->
 	      if pos 
