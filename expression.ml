@@ -169,6 +169,7 @@ let field a name = match a with
      with Not_found -> failwith ("In Expression.field: no field named "^name))
   | _ -> failwith "In Expression.field: this is not a tuple"
 
+
 let apply f a b = 
   let rec aux a b = match a, b with
     | EUnit , x | x, EUnit -> aux (EBool (Integer.bool false)) x
@@ -203,6 +204,11 @@ let apply1 op a =
     | EArray x -> EArray (Array.map aux x)
     | ERecord x -> ERecord (List.map (fun (n,f) -> (n,aux f)) x)
   in aux a
+
+let select a list = apply1 (fun x -> Integer.select x list) a
+(* match a with 
+  | EInt x -> EInt (Integer.select x list)
+  | _ -> failwith "In Expression.select: this is not an integer"*)
 
 let neg,next = match List.map apply1 [Integer.neg;Integer.next] with [a;b] -> a,b | _ -> failwith "wrong number of results"
 
@@ -443,7 +449,7 @@ let ( $<- ) x update_x = (x, update_x)
 
 
 
-let init initial updates =
+let initialize initial updates =
   (*let decl, initialized = reg "initialized" Bool in*)
   let initialized = var "initialized" Type.Bool in
   List.fold_left 
@@ -474,6 +480,11 @@ let functional_synthesis t2list =
   let list = List.fold_left aux [] t2list in
   Speculog.functional_synthesis list 
 
+let compile ?(init=[]) ?(filename="") a =
+  let ups = if init <> [] then initialize init a else a in
+  let aig = functional_synthesis ups in
+  if filename = "" then Aiger.write aig stdout 
+  else (let outch = open_out filename in Aiger.write aig outch; close_out outch)
 
 let for_each list f =
   let treat_one accu (start,last) =

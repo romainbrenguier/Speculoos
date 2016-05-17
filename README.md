@@ -74,7 +74,7 @@ For instance:
 
 > let previous = var "previous" Type.bool 
 
-> let aiger = functional_synthesis [var "rising_edge", (x $& neg previous); previous, x]
+> let _ = compile [var "rising_edge", (x $& neg previous); previous, x]
 
 generates a circuit in which x is an input, previous is a register that record the value of x at the previous clock cycle, and rising_edge is an output true when the current value is true and the previous is false.
 Please see the file in examples/rising_edge.ml for the full program.

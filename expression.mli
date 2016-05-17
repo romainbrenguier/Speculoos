@@ -39,6 +39,9 @@ val size : t -> int
 val field : t -> string -> t
 (** infix notation for field *)
 val ($.) : t -> string -> t
+(** Should only be applied to integers 
+    Select the bits given by the list, each pairs corresponding to an interval. *)
+val select : t -> (int * int) list -> t
 
 (** Should only be applied to union types *)
 val match_with : Type.t -> t -> (string * (t -> t)) list -> t
@@ -103,7 +106,10 @@ val of_int : Type.t -> t -> t
 
 val functional_synthesis : (t * t) list -> Aiger.t
 (** Add an initial configuration to the specifications. *)
-val init : (t * t) list -> (t * t) list -> (t * t) list
+val initialize : (t * t) list -> (t * t) list -> (t * t) list
+
+(** If no filename is provided the aiger file is produced on the standard output *)
+val compile : ?init:(t * t) list -> ?filename:string -> (t * t) list -> unit
 
 (** Special notation for spec *)
 val ($<-) : t -> t -> (t * t)

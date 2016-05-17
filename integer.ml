@@ -42,7 +42,7 @@ let select array list =
   in
   let tab = Array.make size Boolean.False in
   let pos = ref 0 in
-  let rec aux accu = function 
+  let rec aux = function 
     | [] -> ()
     | (a,b) :: tl ->
       if a >= b 
@@ -58,7 +58,10 @@ let select array list =
 	  tab.(!pos) <- get array i;
 	  incr pos
 	done;
-  in make None tab
+      aux tl
+  in  
+  aux list;
+  make None tab
 
 
 exception NonBoolean of (unit t)
