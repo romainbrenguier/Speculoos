@@ -249,11 +249,9 @@ let parse stream =
     let spec = List.fold_left (fun accu (x,y) -> Speculoos.Update (x,y) :: accu) [] (start_parse_updates dec stream) in
     Stream.empty stream;
     let open Speculoos in 
-    print_endline "no_failure";
     Seq (Seq (List.map (fun x -> Init x) init) :: spec)
   with 
   | Stream.Failure ->
-    print_endline "failure";
     Printf.printf "Remaining: %s\n" (remaining_tokens stream);
     print_newline ();
     Printf.printf "Warning: unexpected token \"%s\" in Parser.parse\n" (next_token stream);
