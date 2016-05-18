@@ -1,6 +1,6 @@
 
 let lexer = Genlex.make_lexer 
-  (Type.keywords @ ["true";"false";"!";"&";"+";"|";"^";"=";"<->";"-->";"+";"-";"*";"/";"mod";"next";"<<";">>";"<=";"<";">";">=";"(";")";";";"if";"then";"else";"<-";"match";"with"; "->";".";"var";":";"init";"updates";"||";"when";"{";"}"])
+  (Type.keywords @ ["true";"false";"!";"&";"+";"|";"^";"=";"<->";"-->";"+";"-";"*";"/";"mod";"next";"<<";">>";"<=";"<";">";">=";"(";")";";";"if";"then";"else";"<-";"match";"with"; "->";".";"var";":";"init";"updates";"||";"when";"{";"}";"?"])
 
 module Expr = Expression
 
@@ -30,7 +30,7 @@ let remaining_tokens stream =
   in
   try loop () with _ ->  Buffer.contents buf
 
-let max_level = 10
+let max_level = 11
 
 type declaration =
   { variables : (string * (Type.t * Expression.t)) list;
@@ -71,7 +71,14 @@ let parse stream =
 
 
   let rec parse_expr_remainder dec accu level = 
-    if level = 10 then
+    if level = 11 then 
+      parser 
+ | [< 'Genlex.Kwd "?"; t = parse_expr dec level; 'Genlex.Kwd ":"; e = parse_expr dec level >] -> Expr.ite accu t e
+    | [< >] -> 
+       let e = parse_expr_remainder dec accu (level - 1) stream in
+       if e = accu then e else parse_expr_remainder dec e level stream
+    else
+      if level = 10 then
       parser 
     | [< 'Genlex.Kwd "-->"; e = parse_expr dec level >] -> Expr.implies accu e
     | [< >] -> 
@@ -151,7 +158,7 @@ let parse stream =
 
   and parse_expr dec level = 
     parser
-(*      | [< 'Genlex.Kwd "if"; i = parse_expr dec max_level; 'Genlex.Kwd "then"; t = parse_expr dec 10; 'Genlex.Kwd "else"; e = parse_expr dec max_level; r = parse_expr_remainder dec (Expr.ite i t e) level >] -> r*)
+      (* | [< 'Genlex.Kwd "if"; i = parse_expr dec max_level; 'Genlex.Kwd "then"; t = parse_expr dec 10; 'Genlex.Kwd "else"; e = parse_expr dec max_level; r = parse_expr_remainder dec (Expr.ite i t e) level >] -> r *)
       | [< 'Genlex.Kwd "match"; 'Genlex.Ident name; 'Genlex.Kwd "with"; pat = parse_patterns dec (find_type dec name) (find_var dec name) []; r = parse_expr_remainder dec (Expression.match_with (find_type dec name) (find_var dec name) pat) level >] -> r
       | [< 'Genlex.Kwd "next"; 'Genlex.Ident name ; r = parse_expr_remainder dec (Expr.next (find_var dec name)) level >] -> r
       | [< 'Genlex.Ident name >] -> parse_after_ident dec name level

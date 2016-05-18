@@ -3,4 +3,5 @@ var state : ready | busy;
 
 
 init state <- ready; 
-updates state <- if state = ready & request then busy else ready;
+
+if (state = ready) & request then {state <- busy;} else {state <- ready;}

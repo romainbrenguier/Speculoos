@@ -20,12 +20,22 @@ To install ocaml-cudd, go to the parent directory of Speculoos then enter the fo
 When this is done run:
 > make
 
+This compiles the Speculoos Compiler and the necessary libraries.
+To test the compiler on some examples, run:
 
-To generate some examples, run:
-> make cycles
-> && make matrix
+> make test
 
-## Compiling with Speculoos
+## The Speculoos language
+The Speculoos compilers accepts some basic language that can be compiled to AIGER.
+Some examples are provided in the examples directory.
+However Speculoos is more powerful when used through its Libraries
+
+To compile one example, try:
+> ./speculoosCompiler.byte examples/ex1.spec
+
+
+## Ocaml Library
+### Compiling with Speculoos
 
 We recommend using ocamlbuild. For instance the command:
 > ocamlbuild -tag use_ocaml-cudd -tag use_ocaml-aiger examples/rising_edge.native --
@@ -33,7 +43,7 @@ We recommend using ocamlbuild. For instance the command:
 builds and executes the program in examples/rising_edge.ml.
 You can basically substitute in this command any ml file that you write.
 
-## Datatypes
+### Datatypes
 
 For now only Booleans and unsigned integers are supported.
 Constant values can be declared in that way:
@@ -52,7 +62,7 @@ The argument after Type.int is the width (number of bits) for this value (8 in t
 Speculoos will automatically infer whether x should be an inpout, output or register.
 
 
-## Expressions
+### Expressions
 
 To create circuit we use textual expressions:
 > let d = (a $& b) $| (neg c $& d)
@@ -66,7 +76,7 @@ It is possible to select a subset of bits from an expression using the function 
 
 This selects the first 6 bits of d and put them in reverse order in e.
 
-## Outputs and updates
+### Outputs and updates
 
 A circuit is generated from the description of register updates and outputs expressions.
 For instance:
