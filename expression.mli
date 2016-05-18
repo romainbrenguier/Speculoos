@@ -1,7 +1,12 @@
-(** Speculog expressions *)
+(** Speculoos expressions *)
 
 (** Type of expressions *)
-type t 
+type t = 
+| EUnit
+| EBool of unit Integer.t 
+| EInt of unit Integer.t
+| EArray of t array
+| ERecord of (string * t) list
 
 (*(** Declarations form type *)
 val input : string -> Type.t -> Speculog.declaration * t 
@@ -71,26 +76,6 @@ val modulo : t -> t -> t
 val next : t -> t
 val ite : t -> t -> t -> t
 
-(** {2 Succinct version of the operations} *)
-val ($!) : t -> t
-val ($=>) : t -> t -> t
-val ($<=>) : t -> t -> t
-val ($&) : t -> t -> t
-val ($^) : t -> t -> t
-val ($|) : t -> t -> t
-val ($=) : t -> t -> t
-val ($<=) : t -> t -> t
-val ($<) : t -> t -> t
-val ($>=) : t -> t -> t
-val ($>) : t -> t -> t
-val ( $<< ) : t -> int -> t
-val ( $>> ) : t -> int -> t
-val ($+) : t -> t -> t
-val ($-) : t -> t -> t
-val ($* ) : t -> t -> t
-val ($/) : t -> t -> t
-val ($%) : t -> t -> t
-val ($?) : t -> (t * t) -> t
 
 (* val apply : (unit Integer.t -> unit Integer.t -> unit Integer.t) -> t -> t -> t*)
 (** Should be applied to Boolean expressions *)
@@ -102,33 +87,4 @@ val to_string : t -> string
 val to_int : Type.t -> t -> t
 val of_int : Type.t -> t -> t
 
-(** {2 Updates} *)
-type instruction = 
-| Update of (t * t)
-| When of (t * instruction list)
-| If of (t * instruction list * instruction list)
 
-(** Special notation for updates *)
-val ($<-) : t -> t -> instruction
-  
-(** {2 Synthesis } *)
-
-val functional_synthesis : instruction list -> Aiger.t
-(** Add an initial configuration to the specifications. *)
-val initialize : (t * t) list -> instruction list -> instruction list
-
-(** If no filename is provided the aiger file is produced on the standard output *)
-val compile : ?init:(t * t) list -> ?filename:string -> instruction list -> unit
-
-
-
-val rename : Aiger.t -> string -> Type.t -> string -> Aiger.t
-val to_symbols : Aiger.t -> t -> Aiger.Symbol.t list
-
-(** [import_module aig [a1,b1;...;an,bn] gen] import a module
-    renaming variables [ai] into [bi], the list of newly 
-    created output variables is given as argument to gen, to generate
-    the final AIG. In the end outputs are hidden. *)
-val use_module : Aiger.t -> inputs:((string * t) list) -> outputs:((string * string) list) -> (t list -> Aiger.t) -> Aiger.t
-
-val make_latch : string -> Type.t -> (t -> t -> Aiger.t) -> Aiger.t

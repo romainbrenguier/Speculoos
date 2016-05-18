@@ -91,7 +91,7 @@ let make decl name typ =
 	 
   in 
   let dec,var = aux name typ in
-  Speculog.DList dec, var
+  Synthesis.DList dec, var
 
 (*
 
@@ -117,11 +117,6 @@ let declare decl name t =
   let a = make name t in
   Speculog.DList (aux name [] a), a
 *)
-
-let input = make Speculog.input
-let output = make Speculog.output
-let reg = make Speculog.reg
-let wire = make Speculog.wire
 
 
 let to_expr = function
@@ -265,32 +260,11 @@ let less_eq,less,greater_eq,greater =
 
 let ($@) = get
 let ($.) = field
-let ($!) = neg
-let ($=>) = implies
-let ($<=>) = equiv
-let ($&) = conj
-let ($|) = disj
-let ($^) = xor
-let ($=) = equals
-let ($<=) = less_eq
-let ($<) = less
-let ($>=) = greater_eq
-let ($>) = greater
-let ( $<< ) = left_shift
-let ( $>> ) = right_shift
-let ($+) = add
-let ($-) = minus
-let ( $* ) = mult
-let ( $/ ) = div
-let ( $% ) = modulo
-
 
 let ite i t e =
   match i with 
   | EBool x -> apply (Integer.ite (Integer.cast x)) t e
   | _ -> failwith "In Expression.ite: the condition is not a Boolean"
-
-let ($?) i (t,e) = ite i t e
 
 let of_int typ a = 
   let rec aux rem = function
@@ -447,69 +421,6 @@ let match_with typ a patterns =
   | _ -> failwith "In Expression.match_with: type is not a union"
   
 
-type instruction = 
-| Update of (t * t)
-| When of (t * instruction list)
-| If of (t * instruction list * instruction list)
-
-let ( $<- ) x update_x = Update (x, update_x)
-
-
-
-let initialize initial updates =
-  (*let decl, initialized = reg "initialized" Bool in*)
-  let initialized = var "initialized" Type.Bool in
-  let rec aux accu = function 
-    | Update(var,up) ->
-      let i = 
-	try List.assoc var initial
-	with Not_found -> bool false
-      in Update(var, ite initialized up i) :: accu
-    | When(t, tlist) ->
-      When(t, List.rev (List.fold_left aux [] tlist)) :: accu
-    | If(t, tlist,tlist2) ->
-      If(t, List.rev (List.fold_left aux [] tlist), List.rev (List.fold_left aux [] tlist2)) :: accu
-  in
-  List.fold_left aux [Update(initialized,bool true)] (List.rev updates)
-
-
-let functional_synthesis t2list =
-  let tab = Hashtbl.create 100 in
-  let add_when condition x up = 
-    try Hashtbl.replace tab x (ite condition up (Hashtbl.find tab x))
-    with Not_found -> 
-      Hashtbl.add tab x (ite condition up (bool false))
-  in
-  let rec aux condition = function
-    | When (a,b) -> List.iter (aux (a $& condition)) b
-    | If (e,a,b) -> List.iter (aux (e $& condition)) a;
-      List.iter (aux ((neg e) $& condition)) b
-    | Update (a,b) -> 
-      
-      let rec aux_update = function
-	| EUnit , EUnit -> ()
-	| EInt x, EInt y | EBool x, EInt y -> add_when condition x (EInt y)
-	| EBool x, EBool y | EInt x, EBool y -> add_when condition x (EBool y)
-      (* (x,y) :: accu*)
-	| EArray arr1, EArray arr2 ->
-	  Array.iteri (fun i t -> aux_update (t,arr2.(i))) arr1
-	| ERecord stl1, ERecord stl2 ->
-	  List.iter (fun (s,t) -> aux_update (t, List.assoc s stl2))  stl1
-	| _ -> failwith "In Expression.functional_synthesis: the two elements are not of the same type"
-      in aux_update (a,b)
-  in
-
-  let finalize = function x, EInt y | x, EBool y -> x,y in
-
-  List.iter (aux (bool true)) t2list;
-  let list = Hashtbl.fold (fun x up accu -> (x,up) :: accu) tab [] in
-  Speculog.functional_synthesis (List.map finalize list)
-
-let compile ?(init=[]) ?(filename="") a =
-  let ups = if init <> [] then initialize init a else a in
-  let aig = functional_synthesis ups in
-  if filename = "" then Aiger.write aig stdout 
-  else (let outch = open_out filename in Aiger.write aig outch; close_out outch)
 
 let for_each list f =
   let treat_one accu (start,last) =
@@ -524,54 +435,7 @@ let for_some list f =
   List.fold_left treat_one (bool false) list
 
 
-let to_symbols aiger t = 
-  let rec aux = function
-    | EUnit -> []
-    | EBool i | EInt i -> 
-      let array = Integer.to_boolean_array i in
-      Array.fold_left
-	(fun accu b -> match b with 
-	| Boolean.EVar (s,i) -> (s,Some i) :: accu
-	) [] array
-    | EArray a -> 
-      Array.fold_left (fun accu c -> List.rev_append (aux c) accu) [] a
-  in aux t
 
-let rename aiger s typ name =
-  let u = var s typ in
-  let v = var name typ in
-  let s1,s2 = to_symbols aiger u, to_symbols aiger v in
-  let renaming = List.combine s1 s2 in
-  Aiger.rename aiger renaming
-
-let hiding aiger s typ = 
-  let u = var s typ in
-  let s = to_symbols aiger u in
-  List.fold_left Aiger.hide aiger s
-
-let use_module aiger ~inputs ~outputs generate =
-  let aiger = 
-    List.fold_left (fun aig (s,t) -> 
-      let name = Common.tmp_name () in
-      let typ = to_type t in
-      let new_var = var name typ in
-      let input = functional_synthesis [Update(new_var, t)] in
-      let renamed = rename aig s typ name in
-      let aig = Aiger.compose input renamed in
-      hiding aig name typ
-    ) aiger inputs 
-  in
-  let aiger = Aiger.full_rename aiger outputs (*input_renaming*) in
-  let var_list = 
-    List.fold_left 
-      (fun accu (r,s) -> 
-	(var s (Type.int (Aiger.size_symbol aiger s))) :: accu
-      ) [] outputs
-  in
-  let gen_aiger = (*functional_synthesis*) (generate var_list) in
-  let composed = Aiger.compose aiger gen_aiger in
-  (*let hiden = List.fold_left (fun aig (r,s) -> Aiger.full_hide aig s) composed outputs in*)
-  composed
 
 
 let remove_input aiger inp = 
@@ -588,7 +452,8 @@ let remove_input aiger inp =
     Aiger.ands = List.rev gates;
     Aiger.num_ands = List.length gates
   }
-  
+
+(*  
 let set_latch aiger lit output =
   (* let update = List.assoc lit aiger.Aiger.latches in*)
   Common.debug (Printf.sprintf "setting latch %d -> %d\n" (Aiger.lit2int lit) (Aiger.lit2int output));
@@ -672,3 +537,4 @@ let main =
       let t = parse (lexer stream) in
       print_endline (to_string t)*)
 
+*)

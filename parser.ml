@@ -236,7 +236,7 @@ let parse stream =
     parser | [< 'Genlex.Kwd "init"; e = parse_updates dec [] >] -> e
     | [< >] -> [] (* raise (Stream.Error "Expecting \"init\"")*)
   in
-
+  
   let start_parse_updates dec =
     parser
     | [< 'Genlex.Kwd "updates" >] -> parse_updates dec [] stream
@@ -246,25 +246,31 @@ let parse stream =
   try 
     let dec = parse_dec empty stream in
     let init = parse_init dec stream in
-    let spec = List.rev (start_parse_updates dec stream) in
+    let spec = List.fold_left (fun accu (x,y) -> Speculoos.Update (x,y) :: accu) [] (start_parse_updates dec stream) in
     Stream.empty stream;
-    init,spec
+    let open Speculoos in 
+    print_endline "no_failure";
+    Seq (Seq (List.map (fun x -> Init x) init) :: spec)
   with 
   | Stream.Failure ->
-    Printf.printf "Warning: unexpected token \"%s\" in Parser.parse\n" (next_token stream);
+    print_endline "failure";
     Printf.printf "Remaining: %s\n" (remaining_tokens stream);
     print_newline ();
+    Printf.printf "Warning: unexpected token \"%s\" in Parser.parse\n" (next_token stream);
     raise Stream.Failure
   | Stream.Error x ->   
-    print_endline x;
-    Printf.printf "Warning: unexpected token \"%s\" in Parser.parse\n" (next_token stream);
+    print_string "Stream error: "; print_endline x;
     Printf.printf "Remaining: %s\n" (remaining_tokens stream);
-     raise (Stream.Error x)
+    Printf.printf "Warning: unexpected token \"%s\" in Parser.parse\n" (next_token stream);
+    raise (Stream.Error x)
+  | x -> print_endline "unknown error occured"; raise x
 	
-
+      
 let parse_inch inch =
   let stream = Stream.of_channel inch in
   parse stream
 
+    
+    
 
 

@@ -6,5 +6,5 @@ var product : int 3;
 
 updates
 sum <- (a + b); 
-diff <- if (a <= b) then b - a else a - b
+diff <- if (a <= b) then b - a else a - b;
 

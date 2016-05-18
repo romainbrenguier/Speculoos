@@ -68,7 +68,7 @@ let aiger =
   let fail = var "fail" Type.bool in
   let spec = 
     [
-      x, minus (add x dx) (int 1);
+      x, minus (x $+ dx) (int 1);
       y, minus (add y dy) (int 1);
       fail, disj (disj (equals dx (int 3)) (equals dy (int 3)))
 		 (for_some

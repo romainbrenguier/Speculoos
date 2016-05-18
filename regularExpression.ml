@@ -1,4 +1,4 @@
-open Expression
+open Speculoos
 
 module StringSet = Set.Make(String)
 
@@ -75,8 +75,8 @@ struct
 
   let to_expression prop inputs = 
     let rec aux = function 
-      | And (a,b) -> conj (aux a) (aux b)
-      | Or (a,b) -> disj (aux a) (aux b)
+      | And (a,b) -> (aux a) $& (aux b)
+      | Or (a,b) -> (aux a) $| (aux b)
       | Not a -> neg (aux a)
       | True -> bool true
       | False -> bool false
@@ -485,7 +485,7 @@ let automaton_to_aiger ?(prefix="") auto =
 	      match l with 
 	      | EpsilonTrans -> failwith "in RegularExpression.automaton_to_aiger: the argument should have no epsilon transition"
 	      | PropTrans p ->
-		 let new_expr = (conj (Proposition.to_expression p label_list) (IntMap.find s state_var)) in
+		let new_expr = Proposition.to_expression p label_list $& IntMap.find s state_var in
 		 try 
 		   let old = IntMap.find t map in Expression.disj old new_expr
 		 with Not_found -> new_expr
@@ -497,29 +497,20 @@ let automaton_to_aiger ?(prefix="") auto =
   let initials = 
     IntSet.fold
       (fun s accu ->
-       IntMap.add s (if List.mem s auto.init then bool true else bool false) accu
-      ) (states auto) IntMap.empty
+	add_init accu (IntMap.find s trans_map) (bool (List.mem s auto.init))
+      ) (states auto) empty
   in
 
   let aig_trans = 
-  functional_synthesis 
-    (
-      [
-	init, bool true;
-	accept, acceptation
-      ]
-      @ 
-	IntSet.fold
-	  (fun s accu ->
-	   (IntMap.find s state_var, 
-	    ite init
-		(try IntMap.find s trans_map
-		 with Not_found -> 
-		   Common.debug ("warning: transition for state "^string_of_int s^" not found"); bool false)
-		(IntMap.find s initials))
-	   :: accu
-	  ) (states auto) []
-    )
+    IntSet.fold
+      (fun s accu ->
+	add_update accu (IntMap.find s state_var)
+	  (try IntMap.find s trans_map
+	   with Not_found -> 
+	     Common.debug ("warning: transition for state "^string_of_int s^" not found"); bool false)
+      ) (states auto) initials
+  |> to_aiger
+
   in
 
   let aig = Aiger.hide aig_trans (prefix^"_accept",Some 0) in

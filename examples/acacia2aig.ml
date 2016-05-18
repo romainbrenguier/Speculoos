@@ -1,8 +1,7 @@
 (* To compile this file use: 
    ocamlbuild -tag camlp4 -tag use_ocaml-cudd -tag use_ocaml-aiger acacia2aig.byte
 *)
-open Speculog
-open Expression
+open Speculoos
 
 let lexer = Genlex.make_lexer ["State"; "initial"; ":"; "("; ")"; ","; "!"; "&&"; "U"; "T"; "||"; "{"; "}"; "to"; "state"; "labeled"]
 
@@ -108,7 +107,7 @@ let to_speculog transition_system =
       Expression.ite e (Expression.int k) accu) tab (Expression.int 0)
   in
   
-  Hashtbl.fold (fun k e accu -> Update(k,e) :: accu) output_tab  [Update (state, update_state)]
+  Hashtbl.fold (fun k e accu -> add_update accu k e) output_tab  (Update (state, update_state))
     
       
 
@@ -119,7 +118,7 @@ let main =
     let spec = parse stream in 
     close_in inch;
     Cudd.init 30;
-    spec |> to_speculog |> Expression.functional_synthesis |> Speculog.print_aiger;
+    spec |> to_speculog |> compile;
     Cudd.quit ()
   with Stream.Error _ -> Printf.eprintf "%s\n" (Parser.remaining_tokens stream)
 
