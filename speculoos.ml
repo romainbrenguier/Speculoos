@@ -91,7 +91,7 @@ let initialize initial updates =
     
 
 
-let functional_synthesis t2list =
+let functional_synthesis instructions =
   let tab = Hashtbl.create 100 in
   let add_when condition x up = 
     try Hashtbl.replace tab x (ite condition up (Hashtbl.find tab x))
@@ -103,7 +103,7 @@ let functional_synthesis t2list =
     | When (a,b) -> aux (a $& condition) b
     | If (e,a,b) -> aux (e $& condition) a;
       aux ((neg e) $& condition) b
-    | Init _ -> failwith "in Speculoos.functional_synthesis: the instructions still contain initialisation instruction"
+    | Init _ -> ()
     | Update (a,b) -> 
       
       let rec aux_update = 
@@ -125,7 +125,7 @@ let functional_synthesis t2list =
     | _ -> failwith "in Speculoos.functional_synthesis: updates contain non basic (int or bool) values"
   in
 
-  List.iter (aux (bool true)) t2list;
+  aux (bool true) instructions;
   let list = Hashtbl.fold (fun x up accu -> (x,up) :: accu) tab [] in
   Synthesis.functional_synthesis (List.map finalize list)
 
@@ -135,7 +135,7 @@ let to_aiger instructions =
     if inits <> [] 
     then initialize inits instructions 
     else instructions
-  in functional_synthesis [ups]
+  in functional_synthesis ups
 
 let compile ?(filename="") a =
   let aig = to_aiger a in
@@ -176,7 +176,7 @@ let use_module aiger ~inputs ~outputs generate =
       let name = Common.tmp_name () in
       let typ = to_type t in
       let new_var = var name typ in
-      let input = functional_synthesis [Update(new_var, t)] in
+      let input = functional_synthesis (Update(new_var, t)) in
       let renamed = rename aig s typ name in
       let aig = Aiger.compose input renamed in
       hiding aig name typ

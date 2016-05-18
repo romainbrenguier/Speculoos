@@ -1,6 +1,6 @@
 
 let lexer = Genlex.make_lexer 
-  (Type.keywords @ [(*"reg";"output";"input";*)"true";"false";"!";"&";"+";"|";"^";"=";"<->";"-->";"+";"-";"*";"/";"mod";"next";"<<";">>";"<=";"<";">";">=";"(";")";";";"if";"then";"else";"<-";"match";"with"; "->";".";"var";":";"init";"updates";"||"])
+  (Type.keywords @ ["true";"false";"!";"&";"+";"|";"^";"=";"<->";"-->";"+";"-";"*";"/";"mod";"next";"<<";">>";"<=";"<";">";">=";"(";")";";";"if";"then";"else";"<-";"match";"with"; "->";".";"var";":";"init";"updates";"||";"when";"{";"}"])
 
 module Expr = Expression
 
@@ -45,7 +45,6 @@ let parse stream =
   let find_var dec name = 
     try snd (List.assoc name dec.variables)
     with Not_found -> raise (Var_not_found name)
-      (*Expr.var name (Type.Int (Aiger.size_symbol aiger name))*)
   in
 
   let add_var dec name typ var = 
@@ -64,7 +63,7 @@ let parse stream =
     try fst (List.assoc name dec.variables)
     with Not_found -> failwith ("Unknown type for variable "^name)
   in
-
+  
   let find_type_constructor dec name =
     try List.assoc name dec.constructors
     with Not_found -> failwith ("Unknown type for constructor "^name)
@@ -141,7 +140,7 @@ let parse stream =
 			   
   and parse_field expr dec =
     parser 
-      (* Warning: we have to synthax for arrays *)
+      (* Warning: we have to add syntax for arrays *)
       | [< 'Genlex.Kwd "("; e = parse_expr dec max_level; 'Genlex.Kwd ")" >] -> Expression.get expr e
       | [< 'Genlex.Ident name >] -> Expression.field expr name
 
@@ -152,20 +151,17 @@ let parse stream =
 
   and parse_expr dec level = 
     parser
-      | [< 'Genlex.Kwd "if"; i = parse_expr dec max_level; 'Genlex.Kwd "then"; t = parse_expr dec 10; 'Genlex.Kwd "else"; e = parse_expr dec max_level; r = parse_expr_remainder dec (Expr.ite i t e) level >] -> r
+(*      | [< 'Genlex.Kwd "if"; i = parse_expr dec max_level; 'Genlex.Kwd "then"; t = parse_expr dec 10; 'Genlex.Kwd "else"; e = parse_expr dec max_level; r = parse_expr_remainder dec (Expr.ite i t e) level >] -> r*)
       | [< 'Genlex.Kwd "match"; 'Genlex.Ident name; 'Genlex.Kwd "with"; pat = parse_patterns dec (find_type dec name) (find_var dec name) []; r = parse_expr_remainder dec (Expression.match_with (find_type dec name) (find_var dec name) pat) level >] -> r
       | [< 'Genlex.Kwd "next"; 'Genlex.Ident name ; r = parse_expr_remainder dec (Expr.next (find_var dec name)) level >] -> r
       | [< 'Genlex.Ident name >] -> parse_after_ident dec name level
-    | [< 'Genlex.Kwd "true"; r = parse_expr_remainder dec (Expr.bool true)  level >] -> r
-    | [< 'Genlex.Kwd "false"; r = parse_expr_remainder dec (Expr.bool false) level >] -> r
-    | [< 'Genlex.Int i ; r = parse_expr_remainder dec  (Expr.int i) level >] -> r
-    | [< 'Genlex.Kwd "("; e = parse_expr dec max_level; 'Genlex.Kwd ")"; r = parse_expr_remainder dec e level >] -> r
-    | [< 'Genlex.Kwd "!"; e = parse_expr dec 2; r = parse_expr_remainder dec (Expr.neg e) level >] -> r
-    | [< 'Genlex.Kwd "{"; r = parse_record dec []; 'Genlex.Kwd "}" >] -> Expression.record r
-    | [< 'Genlex.Kwd "["; e = parse_exprs dec []; 'Genlex.Kwd "]" >] -> Expression.array (Array.of_list e)
-    (* | [< >] -> 
-(*Expr.bool true*)
-      raise (Stream.Error "Expecting next, true, false, int, (, {, [, or !")*)
+      | [< 'Genlex.Kwd "true"; r = parse_expr_remainder dec (Expr.bool true)  level >] -> r
+      | [< 'Genlex.Kwd "false"; r = parse_expr_remainder dec (Expr.bool false) level >] -> r
+      | [< 'Genlex.Int i ; r = parse_expr_remainder dec  (Expr.int i) level >] -> r
+      | [< 'Genlex.Kwd "("; e = parse_expr dec max_level; 'Genlex.Kwd ")"; r = parse_expr_remainder dec e level >] -> r
+      | [< 'Genlex.Kwd "!"; e = parse_expr dec 2; r = parse_expr_remainder dec (Expr.neg e) level >] -> r
+      | [< 'Genlex.Kwd "{"; r = parse_record dec []; 'Genlex.Kwd "}" >] -> Expression.record r
+      | [< 'Genlex.Kwd "["; e = parse_exprs dec []; 'Genlex.Kwd "]" >] -> Expression.array (Array.of_list e)
 
   and parse_record dec accu = 
     parser
@@ -176,8 +172,6 @@ let parse stream =
   and parse_constr dec name = 
     parser
     | [< e = parse_expr dec 0 >] ->Expression.constr (find_type_constructor dec name) name e
-    (*| [< 'Genlex.Ident n >] -> Expression.constr (find_type_constructor dec name) name (find_var dec n) 
-    | [< 'Genlex.Kwd "("; e = parse_expr dec max_level; 'Genlex.Kwd ")" >] -> Expression.constr (find_type_constructor dec name) name e *)
     | [< >] -> Expression.constr (find_type_constructor dec name) name Expression.unit
 
   and parse_exprs dec accu = 
@@ -208,48 +202,33 @@ let parse stream =
 
   let rec parse_dec accu = 
     parser 
-  | [< 'Genlex.Kwd "var"; 'Genlex.Ident name; 'Genlex.Kwd ":"; t = Type.parse; 'Genlex.Kwd ";" >] -> 
+| [< 'Genlex.Kwd "var"; 'Genlex.Ident name; 'Genlex.Kwd ":"; t = Type.parse; 'Genlex.Kwd ";" >] -> 
     parse_dec (add_constructors (add_var accu name t (Expression.var name t)) (List.map (fun (a,b,c) -> (a,c)) (Type.constructors t))) stream
   | [< >] -> accu
-      
-  (*| [< 'Genlex.Kwd "input"; 'Genlex.Ident name; 'Genlex.Int i >] -> 
-      parse_dec (((name,i) :: sizes),( fst (Speculog.input name i) :: accu)) stream
-    | [< 'Genlex.Kwd "reg"; 'Genlex.Ident name; 'Genlex.Int i; >] -> 
-       parse_dec ((name,i) :: sizes, fst (Speculog.reg name i) :: accu) stream
-    | [< 'Genlex.Kwd "output"; 'Genlex.Ident name; 'Genlex.Int i; >] -> 
-       parse_dec ((name,i) :: sizes, fst (Speculog.output name i) :: accu) stream
-    | [< 'Genlex.Kwd "wire"; 'Genlex.Ident name; 'Genlex.Int i; >] -> 
-       parse_dec ((name,i) :: sizes, fst (Speculog.wire name i) :: accu) stream*)
   in
   
   let rec parse_updates dec accu = 
+    let open Speculoos in
     parser 
-    | [< (*'Genlex.Ident name;*) u = parse_expr dec max_level; 'Genlex.Kwd "<-"; e = parse_expr dec max_level; 'Genlex.Kwd ";"; r = parse_updates_remainder dec (((*find_var dec name*)u,e)::accu) >] -> r
-    | [< >] -> accu
-  and parse_updates_remainder dec accu = 
-    parser
-    | [< u = parse_updates dec accu >] -> u
-    | [< >] -> accu
-  in
+    | [< u = parse_expr dec max_level; 'Genlex.Kwd "<-"; e = parse_expr dec max_level; 'Genlex.Kwd ";"; r = parse_updates dec (add_update accu u e) >] -> r
+    | [< 'Genlex.Kwd "init"; u = parse_expr dec max_level; 'Genlex.Kwd "<-"; e = parse_expr dec max_level; 'Genlex.Kwd ";"; r = parse_updates dec (add_init accu u e) >] -> r
+    | [< 'Genlex.Kwd "when"; e = parse_expr dec max_level; 'Genlex.Kwd "{"; ups = parse_updates dec empty; 'Genlex.Kwd "}"; r  = parse_updates dec (add_when accu e ups) >] -> r
 
-  let parse_init dec =
-    parser | [< 'Genlex.Kwd "init"; e = parse_updates dec [] >] -> e
-    | [< >] -> [] (* raise (Stream.Error "Expecting \"init\"")*)
+    | [< 'Genlex.Kwd "if"; e = parse_expr dec max_level; 'Genlex.Kwd "then"; 'Genlex.Kwd "{"; ups = parse_updates dec empty; 'Genlex.Kwd "}"; 'Genlex.Kwd "else"; 'Genlex.Kwd "{"; ups2 = parse_updates dec empty; 'Genlex.Kwd "}";r  = parse_updates dec (add_if accu e ups ups2) >] -> r
+    | [< >] -> accu
   in
   
   let start_parse_updates dec =
     parser
-    | [< 'Genlex.Kwd "updates" >] -> parse_updates dec [] stream
-    | [< >] -> parse_updates dec [] stream (* raise (Stream.Error "Expecting \"updates\"")*)
+    | [< 'Genlex.Kwd "updates" >] -> parse_updates dec Speculoos.empty stream
+    | [< >] -> parse_updates dec Speculoos.empty stream
   in
 
   try 
     let dec = parse_dec empty stream in
-    let init = parse_init dec stream in
-    let spec = List.fold_left (fun accu (x,y) -> Speculoos.Update (x,y) :: accu) [] (start_parse_updates dec stream) in
+    let spec = start_parse_updates dec stream in
     Stream.empty stream;
-    let open Speculoos in 
-    Seq (Seq (List.map (fun x -> Init x) init) :: spec)
+    spec
   with 
   | Stream.Failure ->
     Printf.printf "Remaining: %s\n" (remaining_tokens stream);
