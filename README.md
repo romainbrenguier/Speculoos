@@ -33,6 +33,97 @@ However Speculoos is more powerful when used through its Libraries
 To compile one example, try:
 > ./speculoosCompiler.byte examples/ex1.spec
 
+### Variables 
+Variables are declared in the begining of the file.
+The syntax is:
+> var <variable_name> : <variable_type>;
+
+The type can be unsigned integer: int <width>, Boolean: bool, arrays of other type: (<cell_type>)[<size>], record: { <field_name>: <type> ; ... } or union type: <Constructor_name> of <type> | ...
+Here is an example that illustrates all this declarations:
+
+> var i : int 4;
+
+> var b : bool;
+
+> var arr : (int 8)[4];
+
+> var state : { x : int 4; y : int 4; time : int 4 };
+
+> var position : Pos of int 7 | Neg of int 7 ;
+
+Optionaly variables can be given an initial value using the syntax:
+> init <variable_name> <- <initial_value> ;
+
+If no initial value is given, every bit is considered to be 0
+
+Variable declarations are followed by the description of variables' updates which are given using the syntax: <variable_name> <- <expression>;
+
+### Constants
+
+It is possible to use integer constants and the Boolean true and false constants.
+
+
+### Conditional instructions
+
+There are to two kinds of conditional instructions "when" and "if".
+
+> when (gate[0]) { gate[1] <- ! gate[2]; } 
+
+> if (gate[1]) then {gate[0] <- gate[2]; } else {gate[2] <- gate[0];}
+
+If several instructions update the same variable, the last one for which the conditions holds is applied.
+
+### Expressions
+
+Speculoos provides the following Boolean operators, given by order of precedence:
+
+! : negation
+ 
+>> and << : right shift and left shift by an constant number of bits
+
+ & : bitwise conjunction
+
+|| : bitwise disjunction
+
+^ : bitwise xor
+
+<-> : bitwise equivalence
+ 
+--> : bitwise implication
+
+? : : if then else expression
+
+
+It also provides the following operations on unsigned integers:
+
+mod : remainder in division
+
+/ : division
+
+* : multiplication
+
+- : substraction
+
++ : addition
+
+=, <=, <, >, >= : comparison
+
+
+
+### Accessing fields of complex datatypes
+
+Fields of records are accessed using the 'dot' operator:
+> when (state.y < 10 & input) {state.y <- state.y + 1;} 
+
+Elements of an array are accessed using the [] operator: 
+> arr[2] <- arr[1] + arr[0];
+
+Union types are accessed through pattern matching:
+> position <- match position with
+    | Pos i -> (i > 0) ? Pos (i - 1) : Neg 1
+    | Neg i -> Neg (i + 1)
+
+
 
 ## Ocaml Library
 ### Compiling with Speculoos

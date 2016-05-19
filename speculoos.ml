@@ -59,10 +59,14 @@ type t =
 
 let seq t = Seq t
 let empty = seq []
-let add_update t x u = Seq [t;Update(x,u)]
-let add_when t c a = Seq [t;When(c,a)]
-let add_if t c a b = Seq [t;If(c,a,b)]
-let add_init t a b = Seq [t;Init(a,b)]
+let add t x = match t with 
+  | Seq l -> Seq (List.rev (x :: (List.rev l)))
+  | y -> Seq [y;x]
+
+let add_update t x u = add t (Update(x,u))
+let add_when t c a = add t (When(c,a))
+let add_if t c a b = add t (If(c,a,b))
+let add_init t a b = add t (Init(a,b))
   
 let extract_init = 
   let rec aux accu = function
@@ -98,6 +102,7 @@ let functional_synthesis instructions =
     with Not_found -> 
       Hashtbl.add tab x (ite condition up (bool false))
   in
+
   let rec aux condition = function
     | Seq list -> List.iter (aux condition) list
     | When (a,b) -> aux (a $& condition) b
