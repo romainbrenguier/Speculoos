@@ -2,8 +2,8 @@ open Common
 
 type t = 
 | EUnit
-| EBool of unit Integer.t 
-| EInt of unit Integer.t
+| EBool of Boolean.t 
+| EInt of Integer.t
 | EArray of t array
 | ERecord of (string * t) list
 (*| EUnion of 'a Integer.t * 'a Integer.t*)
@@ -11,7 +11,8 @@ type t =
 let to_string = 
   let rec aux = function
     | EUnit -> "()"
-    | EBool x | EInt x -> Integer.to_string x
+    | EBool x -> Boolean.to_string x
+    | EInt x -> Integer.to_string x
     | EArray arr -> 
       Array.fold_left (fun accu e -> accu^aux e^";") "[| " arr ^ "|]"
     | ERecord sel -> 
@@ -23,7 +24,7 @@ let to_string =
 let var name typ = 
   let rec aux prefix = function
     | Type.Unit -> EUnit
-    | Type.Bool -> EBool (Integer.bool_var prefix)
+    | Type.Bool -> EBool (Integer.to_boolean (Integer.bool_var prefix))
     | Type.Int i -> EInt (Integer.var prefix i)
 
     | Type.Array (t,i) -> 
@@ -54,6 +55,7 @@ let var name typ =
 
 
 
+(*
 let make decl name typ = 
   let rec aux prefix = function
     | Type.Unit -> [],EUnit
@@ -93,6 +95,9 @@ let make decl name typ =
   let dec,var = aux name typ in
   Synthesis.DList dec, var
 
+*)
+
+
 (*
 
 let declare decl name t = 
@@ -119,8 +124,9 @@ let declare decl name t =
 *)
 
 
-let to_expr = function
-  | EBool x | EInt x -> x
+let to_integer = function
+  | EBool x -> Integer.of_boolean x 
+  | EInt x -> x
   | EUnit -> failwith "In Expression.to_expr: this is a unit expression"
   | EArray _ -> failwith "In Expression.to_expr: this is an array and not a atomic expression"
   | ERecord _ -> failwith "In Expression.to_expr: this is an tuple and not a atomic expression"
@@ -144,8 +150,8 @@ let get a index =
   in
   let rec aux array = match array.(0) with
     | EUnit -> EUnit
-    | EBool _ -> EBool (Integer.multiplex i (Array.map to_expr array))
-    | EInt _ -> EInt (Integer.multiplex i (Array.map to_expr array))
+    | EBool _ -> EBool (Integer.to_boolean (Integer.multiplex i (Array.map to_integer array)))
+    | EInt _ -> EInt (Integer.multiplex i (Array.map to_integer array))
     | EArray a -> 
       EArray (Array.init (Array.length a) 
 			 (fun j -> aux (Array.map (function EArray x -> x.(j) | _ -> failwith "This value should only  contain arrays") array)))
@@ -167,12 +173,10 @@ let field a name = match a with
 (* Warning this should only be used for commutative operators *)
 let apply f a b = 
   let rec aux a b = match a, b with
-    | EUnit , x -> aux (EBool (Integer.bool false)) x
-    | x, EUnit -> aux x (EBool (Integer.bool false))
-    | EBool x, EBool y -> EBool (f x y)
-    | EInt x, EInt y 
-    | EBool x, EInt y -> EInt (f x y)
-    | EInt y, EBool x -> EInt (f y x)
+    | EBool x, EBool y -> EBool (Integer.to_boolean (f (Integer.of_boolean x) (Integer.of_boolean y)))
+    | EInt x, EInt y -> EInt (f x y)
+    | EBool x, EInt y -> EInt (f (Integer.of_boolean x) y)
+    | EInt y, EBool x -> EInt (f y (Integer.of_boolean x))
 
     | EArray x, EArray y ->
       if Array.length x <> Array.length y
@@ -187,6 +191,8 @@ let apply f a b =
 	     | Some field2 -> (name,aux field field2) :: accu
 	     | None -> failwith ("In Expression.apply: the second argument has no field named "^name)
 	   ) [] x)
+    | EUnit , x
+    | x, EUnit -> failwith "In Expression.apply: operator applied to unit expression"
     | _ -> 
        print_endline ("the two elements have different types: "^to_string a^" and "^to_string b);
        failwith ("In Expression.apply: the two elements have different types: "^to_string a^" and "^to_string b)
@@ -196,7 +202,7 @@ let apply f a b =
 let apply1 op a = 
   let rec aux = function 
     | EUnit -> EUnit
-    | EBool x -> EBool (op x)
+    | EBool x -> EBool (Integer.to_boolean (op (Integer.of_boolean x)))
     | EInt x -> EInt (op x)
     | EArray x -> EArray (Array.map aux x)
     | ERecord x -> ERecord (List.map (fun (n,f) -> (n,aux f)) x)
@@ -209,6 +215,16 @@ let select a list = apply1 (fun x -> Integer.select x list) a
 
 let neg,next = match List.map apply1 [Integer.neg;Integer.next] with [a;b] -> a,b | _ -> failwith "wrong number of results"
 
+let apply1_bool op a =   
+  let rec aux = function 
+    | EUnit -> EUnit
+    | EBool x -> EBool (op (Integer.of_boolean x))
+    | EInt x -> EBool (op x)
+    | EArray x -> EArray (Array.map aux x)
+    | ERecord x -> ERecord (List.map (fun (n,f) -> (n,aux f)) x)
+  in aux a
+
+let andR,orR,xorR = match List.map apply1_bool [Integer.andR;Integer.orR;Integer.xorR] with [a;b;c] -> a,b,c | _ -> failwith "wrong number of results"
   
 let implies,equiv,conj,disj,xor,add,minus,mult,div,modulo =
   match List.map apply [Integer.implies;Integer.equiv;Integer.conj;Integer.disj;Integer.xor;Integer.add;Integer.minus;Integer.mult;Integer.div;Integer.modulo] with 
@@ -216,8 +232,8 @@ let implies,equiv,conj,disj,xor,add,minus,mult,div,modulo =
   | _ -> failwith "wrong number of results"
 
 let unit = EUnit
-let int i = EInt (Integer.cast (Integer.int i))
-let bool b = EBool (Integer.cast (Integer.bool b))
+let int i = EInt (Integer.int i)
+let bool b = EBool (if b then Boolean.True else Boolean.False)
 
 let left_shift e i = match e with
   | EInt a -> EInt (Integer.left_shift a i)
@@ -230,27 +246,27 @@ let right_shift e i = match e with
 let equals a b =
   let rec aux = function
     | EUnit -> failwith "In Expression.equals: element is unit"
-    | EBool x -> EBool x
-    | EInt x -> EBool x
+    | EBool x -> x
+    | EInt x -> Integer.to_boolean x
     | EArray a -> 
       Array.fold_left
-	(fun accu e ->
-	  conj (aux e) accu
-	) (EBool (Integer.bool true)) a
+	(fun accu e -> Boolean.conj (aux e) accu)
+	Boolean.True a
 
     | ERecord l -> 
       List.fold_left
-	(fun accu (s,e) ->
-	  conj (aux e) accu
-	) (EBool (Integer.bool true)) l
+	(fun accu (s,e) -> Boolean.conj (aux e) accu)
+	Boolean.True l
 
-  in aux (apply Integer.equals a b )
+  in 
+  apply (fun x y -> Integer.equals x y |> Integer.of_boolean) a b 
+  |> aux |> (fun x -> EBool x)
 
 let comparison op a b =
-  let rec aux = function
-    | EInt x -> EBool x
-    | _ -> failwith "In Expression.comparison: element is not an integer"
-  in aux (apply op a b )
+  let rec aux op = function
+    | EInt a, EInt b -> EBool (op a b)
+    | _ -> failwith "In Expression.comparison: compared values are not integers"
+  in aux op (a,b)
 
 let less_eq,less,greater_eq,greater = 
   match List.map comparison [Integer.less_eq;Integer.less;Integer.greater_eq;Integer.greater] with
@@ -263,16 +279,20 @@ let ($.) = field
 
 let ite i t e =
   match i with 
-  | EBool x -> apply (Integer.ite (Integer.cast x)) t e
+  | EBool x -> apply (Integer.ite x) t e
   | _ -> failwith "In Expression.ite: the condition is not a Boolean"
+
+let mux c x = 
+  EInt (Integer.multiplex (to_integer c) (Array.map to_integer x))
+
 
 let of_int typ a = 
   let rec aux rem = function
     | Type.Unit -> EUnit, rem
     | Type.Bool -> 
-      EBool (Integer.cast (Integer.of_boolean rem.(0))), Array.sub rem 1 (Array.length rem - 1)
+      EBool rem.(0), Array.sub rem 1 (Array.length rem - 1)
     | Type.Int i -> 
-      EInt (Integer.make None (Array.sub rem 0 i)), Array.sub rem i (Array.length rem - i)
+      EInt (Integer.make (Array.sub rem 0 i)), Array.sub rem i (Array.length rem - i)
     | Type.Array (t,n) -> 
       let arr = Array.make n EUnit in
       let rec loop rem i =
@@ -322,7 +342,7 @@ let to_int typ a =
     | Type.Unit, EUnit -> sum
     | Type.Bool , EBool b -> 
       Array.init (Array.length sum + 1) 
-	(fun i -> if i = 0 then Integer.get b 0 else sum.(i-1))
+	(fun i -> if i = 0 then b else sum.(i-1))
     | Type.Int i , EInt e -> 
       Array.init (Array.length sum + i) 
 	(fun j -> if j < i then Integer.get e j else sum.(j-i))
@@ -350,7 +370,7 @@ let to_int typ a =
 
     | x , e -> failwith ("In Expression.to_int: the element is not of type "^Type.to_string x^", its value is "^to_string e)
 	
-  in EInt (Integer.make None (aux [| |] typ a))
+  in EInt (Integer.make (aux [| |] typ a))
 
 
 let constr typ name a = 
@@ -404,8 +424,8 @@ let match_with typ a patterns =
 	    try
 	      let index = Hashtbl.find tab pat in
 	      let e = expr_of_pat pat expr in
-	      ite (equals (field a "constr") (EInt (Integer.cast (Integer.int index))))
-		  e accu
+	      ite (equals (field a "constr") (EInt (Integer.int index)))
+		e accu
 	    with Not_found -> failwith ("In Expression.match_with: type "^Type.to_string typ^" has no constructor "^pat)
 	   ) (expr_of_pat phd ehd) tl
       | _ -> failwith "In Expression.match_with: empty pattern"

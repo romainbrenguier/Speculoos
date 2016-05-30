@@ -1,6 +1,7 @@
 # Speculoos
 
-Speculoos (Specification Logics for Synthesis) is a set of tools for specification that can be converted to AIGER files and synthesized with external tools.
+Speculoos (Specification Logics for Synthesis) is a set of tools for Logic Synthesis.
+It converts logical specifications to AIGER files.
 
 ## Installation
 

@@ -177,16 +177,16 @@ struct
 end
 
 
-exception NonSynthesizable of (bool Integer.t * bool Integer.t)
+exception NonSynthesizable of (Boolean.t * Boolean.t)
 let synthesize declarations constr =
   let types = of_declaration declarations in
-  let bdd = Constraint.expr_to_bdd (Integer.to_boolean constr) in
+  let bdd = Constraint.expr_to_bdd constr in
   try
     AigerBdd.bdd_to_aiger (inputs types) (registers types) (outputs types) (wires types) bdd
   with (AigerBdd.Unsatisfiable (aig,bdd)) -> 
     let expr = Boolean.of_bdd bdd (List.rev_append (inputs types) (registers types)) in
     (*AigerBdd.print_valuation aig (List.rev_append (Aiger.inputs aig) (Aiger.latches aig)) x;*)
-    raise (NonSynthesizable (constr,Integer.make None [|expr|]))
+    raise (NonSynthesizable (constr,expr))
 
 let add_synthesized declarations constraints aiger =
   let inputs = Aiger.inputs aiger in

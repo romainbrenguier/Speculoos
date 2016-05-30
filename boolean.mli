@@ -17,19 +17,21 @@ val var : string -> int -> t
 val next_var : string -> int -> t
 val simple : string -> t
 val next_simple : string -> t
+
+val conj : t -> t -> t
+val disj : t -> t -> t
+val neg : t -> t 
+val xor : t -> t -> t
+val equals : t -> t -> t
+val implies : t -> t -> t
+val forall : t list -> t -> t
+val exists : t list -> t -> t
+
 exception AlreadyNext of t
 val next : t -> t
     
 val for_each : (int * int) list -> (int -> t) -> t
 val of_bdd : Cudd.bdd -> AigerBdd.symbol list -> t
-val conjunction : t -> t -> t
-val disjunction : t -> t -> t
-val negation : t -> t 
-val xor : t -> t -> t
-val equality : t -> t -> t
-val implication : t -> t -> t
-val forall : t list -> t -> t
-val exists : t list -> t -> t
 val of_list : t list -> t
 val add_to_aiger : Aiger.t -> t -> (Aiger.t * Aiger.lit)
 

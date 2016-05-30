@@ -29,6 +29,11 @@ let ( $% ) = modulo
 let ite = ite
 let ($?) i (t,e) = ite i t e
 
+let mux c x = mux c x
+let andR = andR
+let orR = orR
+let xorR = xorR
+
 module Syntax = 
 struct
   let (=>) = implies
@@ -49,6 +54,7 @@ struct
   let ( / ) = div
   let ( % ) = modulo
 end
+
 
 type t = 
 | Update of (Expression.t * Expression.t)
@@ -114,8 +120,10 @@ let functional_synthesis instructions =
       let rec aux_update = 
 	let open Expression in function
 	| EUnit , EUnit -> ()
-	| EInt x, EInt y | EBool x, EInt y -> add_when condition x (EInt y)
-	| EBool x, EBool y | EInt x, EBool y -> add_when condition x (EBool y)
+	| EInt x, EInt y  -> add_when condition x (EInt y)
+	| EBool x, EInt y -> add_when condition (Integer.of_boolean x) (EInt y)
+	| EBool x, EBool y -> add_when condition (Integer.of_boolean x) (EBool y)
+	| EInt x, EBool y -> add_when condition x (EBool y)
       (* (x,y) :: accu*)
 	| EArray arr1, EArray arr2 ->
 	  Array.iteri (fun i t -> aux_update (t,arr2.(i))) arr1
@@ -126,7 +134,8 @@ let functional_synthesis instructions =
   in
 
   let finalize = function 
-    | x, EInt y | x, EBool y -> x,y 
+    | x, EInt y -> x,y 
+    | x, EBool y -> x,Integer.of_boolean y 
     | _ -> failwith "in Speculoos.functional_synthesis: updates contain non basic (int or bool) values"
   in
 
@@ -150,7 +159,9 @@ let compile ?(filename="") a =
 let to_symbols aiger t = 
   let rec aux = function
     | EUnit -> []
-    | EBool i | EInt i -> 
+    | EBool (Boolean.EVar (s,i)) -> [s,Some i]
+    | EBool _ -> failwith "in Speculoos.to_symbols: the value is not a Boolean variable"
+    | EInt i -> 
       let array = Integer.to_boolean_array i in
       Array.fold_left
 	(fun accu b -> match b with 

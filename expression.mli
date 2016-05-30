@@ -3,8 +3,8 @@
 (** Type of expressions *)
 type t = 
 | EUnit
-| EBool of unit Integer.t 
-| EInt of unit Integer.t
+| EBool of Boolean.t 
+| EInt of Integer.t
 | EArray of t array
 | ERecord of (string * t) list
 
@@ -28,7 +28,7 @@ val constr : Type.t -> string -> t -> t
 (** {2 Access} *)
 
 (** Should only be applied to simple types (bool and int) *)
-val to_expr : t -> unit Integer.t
+val to_integer : t -> Integer.t
 
 (** Should only be applied to arrays.
     The first argument is a table and
@@ -75,6 +75,14 @@ val div : t -> t -> t
 val modulo : t -> t -> t
 val next : t -> t
 val ite : t -> t -> t -> t
+
+(** Selects the element in the array that is indexed by the first argument *)
+val mux : t -> t array -> t
+
+(** Bitwise reductions *)
+val andR : t -> t
+val orR : t -> t
+val xorR : t -> t
 
 
 (* val apply : (unit Integer.t -> unit Integer.t -> unit Integer.t) -> t -> t -> t*)

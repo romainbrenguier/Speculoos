@@ -1,93 +1,82 @@
-type 'a t
-type s_bool = bool t
-type s_int = int t
+type t
 
-
-val make : 'a option -> Boolean.t array -> 'a t
-val cast : 'a t -> 'b t
-val bool : bool -> 'a t
-val of_boolean : Boolean.t -> 'a t
-exception NonBoolean of unit t
-val to_boolean : bool t -> Boolean.t
-val to_string : 'a t -> string
-val of_array : bool array -> 'a t
-val to_boolean_array : 'a t -> Boolean.t array
-val int : int -> 'a t
+val make : Boolean.t array -> t
+val bool : bool -> t
+val of_boolean : Boolean.t -> t
+exception NonBoolean of t
+val to_boolean : t -> Boolean.t
+val to_string : t -> string
+val of_array : bool array -> t
+val to_boolean_array : t -> Boolean.t array
+val int : int -> t
 (** Gives the i-th bit of an expression *)
-val get : 'a t -> int -> Boolean.t
-val get_expr : 'a t -> int -> 'a t
-val size : 'a t -> int
-val var : string -> int -> 'a t
-val bool_var : string -> 'a t
+val get : t -> int -> Boolean.t
+val get_expr : t -> int -> t
+val size : t -> int
+val var : string -> int -> t
+val bool_var : string -> t
 
 (** Select the bits given by the list, each pairs corresponding to an interval. *)
-val select : 'a t -> (int * int) list -> 'a t
+val select : t -> (int * int) list -> t
 
 (** Bitwise negation. *)
-val neg : 'a t -> 'a t 
-val not : 'a t -> 'a t 
-val ( !! ) : 'a t -> 'a t
+val neg : t -> t 
 (** Bitwise conjunction. *)
-val conj : 'a t -> 'a t -> 'a t
-val ( && ) : 'a t -> 'a t -> 'a t
+val conj : t -> t -> t
 (** Bitwise disjunction. *)
-(*   "|" cannot be used since it is used in caml for pattern matching *)
-val disj : 'a t -> 'a t -> 'a t
-val ( or ) : 'a t -> 'a t -> 'a t
+val disj : t -> t -> t
 
 (** Bitwise xor *)
-val xor : 'a t -> 'a t -> 'a t
-(** Another notation for [xor] *)
-val ( ^^ ) : 'a t -> 'a t -> 'a t
+val xor : t -> t -> t
 (** Bitwise equality *)
-val equiv : 'a t -> 'a t -> 'a t
+val equiv : t -> t -> t
 (** Bitwise implication *)
-val implies : 'a t -> 'a t -> 'a t
+val implies : t -> t -> t
 
 
 
 (** Equality. *)
-(*"=" cannot be used since it is already used in caml *)
-val equals : 'a t -> 'a t -> 'a t
-val ( == ) : 'a t -> 'a t -> 'a t
+val equals : t -> t -> Boolean.t
 
-
-val next : 'a t -> 'a t
+val next : t -> t
  
 (** Addition *)
-val add : 'a t -> 'a t -> 'a t
-val ( ++ ) : 'a t -> 'a t -> 'a t
+val add : t -> t -> t
 
-val minus : 'a t -> 'a t -> 'a t
-val ( -- ) : 'a t -> 'a t -> 'a t
+val minus : t -> t -> t
 
-val left_shift : 'a t -> int -> 'a t 
+val left_shift : t -> int -> t 
 
-val right_shift : 'a t -> int -> 'a t 
+val right_shift : t -> int -> t 
 
-val mult : 'a t -> 'a t -> 'a t
+val mult : t -> t -> t
 
 (** [less a b] a is less than b (i.e. a < b)*)
-val less : 'a t -> 'a t -> 'a t
-val less_eq : 'a t -> 'a t -> 'a t
+val less : t -> t -> Boolean.t
+val less_eq : t -> t -> Boolean.t
 
-val greater : 'a t -> 'a t -> 'a t
-val greater_eq : 'a t -> 'a t -> 'a t
+val greater : t -> t -> Boolean.t
+val greater_eq : t -> t -> Boolean.t
 
 (** Gives the quotient and the remainder in the integer division *)
-val full_divide : 'a t -> 'a t -> ('a t * 'a t)
-val modulo : 'a t -> 'a t -> 'a t
-val div : 'a t -> 'a t -> 'a t
+val full_divide : t -> t -> (t * t)
+val modulo : t -> t -> t
+val div : t -> t -> t
 
 (** Selects the element in the array that is indexed by the first argument *)
-val multiplex : 'a t -> ('a t) array -> 'a t
+val multiplex : t -> t array -> t
 (** If Then Else *)
-val ite : bool t -> 'a t -> 'a t -> 'a t
+val ite : Boolean.t -> t -> t -> t
 
-val for_each : (int * int) list -> (int -> bool t) -> bool t
+(** Bitwise reductions *)
+val andR : t -> Boolean.t
+val orR : t -> Boolean.t
+val xorR : t -> Boolean.t
+
+val for_each : (int * int) list -> (int -> t) -> t
 
 (** Find solutions to an equation.
     The second parameter is the list of parameters to find. *)
-val solve : bool t -> 'a t list -> 'a t list
+val solve : Boolean.t -> t list -> t list
 
 

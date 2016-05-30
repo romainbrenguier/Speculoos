@@ -78,14 +78,14 @@ let append a l = List.fold_left insert l a
 let partition list1 list2 =
   List.partition (fun x -> List.mem x list2) list1
 
-let rec negation a = match a with
+let rec neg a = match a with
   | True -> False | False -> True 
   | ENot a -> a 
-  | EOr a -> EAnd (List.map negation a)
-  | EAnd a -> EOr (List.map negation a)
+  | EOr a -> EAnd (List.map neg a)
+  | EAnd a -> EOr (List.map neg a)
   | x -> ENot x
   
-let disjunction a b = match a , b with
+let disj a b = match a , b with
     | True, x | x , True -> True
     | False, x | x, False -> x
     | EOr a, EOr b -> EOr (append a b)
@@ -96,9 +96,9 @@ let disjunction a b = match a , b with
       if (List.length (fst p)) > 0
       then EAnd (EOr([EAnd (snd p); EAnd (snd (partition b a))]) :: fst p)
       else EOr [EAnd a; EAnd b]
-    | a, b -> if a = b then a else if a = negation b then True else EOr [a;b]
+    | a, b -> if a = b then a else if a = neg b then True else EOr [a;b]
 
-let conjunction a b = match a , b with
+let conj a b = match a , b with
     | True, x | x , True -> x
     | False, x | x, False -> False
     | EAnd a, EAnd b -> EAnd (append a b)
@@ -111,22 +111,22 @@ let conjunction a b = match a , b with
     | a, b -> if a = b then a else if a = ENot b || ENot a = b then False else EAnd [a;b]
 	
 
-let xor a b = disjunction (conjunction a (negation b)) (conjunction (negation a) b)
-let equality a b = disjunction (conjunction a b) (conjunction (negation a) (negation b))
+let xor a b = disj (conj a (neg b)) (conj (neg a) b)
+let equals a b = disj (conj a b) (conj (neg a) (neg b))
 
 
-let implication a b = disjunction b (negation a)
+let implies a b = disj b (neg a)
   
 let for_each list f =
   let treat_one (start,last) =
     of_list (iter start last (fun i c -> (f i) :: c) [])
   in of_list (List.map treat_one list)
 
-let ( $& ) = conjunction    
-let ( $| ) = disjunction
-let ( $= ) = equality
+let ( $& ) = conj
+let ( $| ) = disj
+let ( $= ) = equals
 let ( $^ ) = xor
-let ( $=> ) = implication
+let ( $=> ) = implies
   
 module BddMap = Map.Make(struct type t = Cudd.bdd let compare = Cudd.compare end)
 
@@ -134,7 +134,7 @@ let of_bdd bdd symbols =
   let insert bdd expr map = 
     (*print_endline (to_string expr);*)
     let n_expr =
-      try disjunction (BddMap.find bdd map) expr
+      try disj (BddMap.find bdd map) expr
       with Not_found -> expr
     in BddMap.add bdd n_expr map
   in
@@ -156,9 +156,9 @@ let of_bdd bdd symbols =
 	let t = Cudd.bddRestrict bdd var_bdd in
 	match opt with 
 	| Some i ->
-	  let expr_t = conjunction expr (EVar (name,i)) in
+	  let expr_t = conj expr (EVar (name,i)) in
           let e = Cudd.bddRestrict bdd (Cudd.bddNot var_bdd) in
-	  let expr_e = conjunction expr (ENot (EVar (name,i))) in
+	  let expr_e = conj expr (ENot (EVar (name,i))) in
 	
 	  if Cudd.compare e t = 0
 	  then insert e expr accu 
@@ -167,9 +167,9 @@ let of_bdd bdd symbols =
 	    let accu = insert e expr_e accu in
 	    accu
 	| None ->
-	  let expr_t = conjunction expr (ESimple name) in
+	  let expr_t = conj expr (ESimple name) in
           let e = Cudd.bddRestrict bdd (Cudd.bddNot var_bdd) in
-	  let expr_e = conjunction expr (ENot (ESimple name)) in
+	  let expr_e = conj expr (ENot (ESimple name)) in
 	
 	  if Cudd.compare e t = 0
 	  then insert e expr accu 

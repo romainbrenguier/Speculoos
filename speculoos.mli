@@ -42,6 +42,11 @@ val ($/) : Expression.t -> Expression.t -> Expression.t
 val ($%) : Expression.t -> Expression.t -> Expression.t
 val ite : Expression.t -> Expression.t -> Expression.t -> Expression.t
 val ($?) : Expression.t -> (Expression.t * Expression.t) -> Expression.t
+val mux : Expression.t -> Expression.t array -> Expression.t
+(** Bitwise reductions *)
+val andR : Expression.t -> Expression.t
+val orR : Expression.t -> Expression.t
+val xorR : Expression.t -> Expression.t
 
 (** {2 Overriding Ocaml syntax} *)
 module Syntax :
