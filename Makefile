@@ -28,6 +28,12 @@ acacia2aig.native: *.ml examples/acacia2aig.ml
 acacia2aig.byte: *.ml examples/acacia2aig.ml
 	ocamlbuild -tag use_camlp4 -tag camlp4o -tag use_ocaml-cudd -tag use_ocaml-aiger examples/acacia2aig.byte
 
+addinputs2aig.native: *.ml examples/addinputs2aig.ml
+	ocamlbuild -tag use_camlp4 -tag camlp4o -tag use_ocaml-cudd -tag use_ocaml-aiger examples/addinputs2aig.native
+
+addinputs2aig.byte: *.ml examples/addinputs2aig.ml
+	ocamlbuild -tag use_camlp4 -tag camlp4o -tag use_ocaml-cudd -tag use_ocaml-aiger examples/addinputs2aig.byte
+
 clean:
 	ocamlbuild -clean
 	rm -f *.ppo *.ppr *.ast

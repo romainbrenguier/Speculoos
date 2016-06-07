@@ -1,10 +1,12 @@
 open Common
 
+let display_latches = false
+
 let successors game valuation inputs = 
   let bdd_val = AigerBdd.bdd_of_valuation valuation in
   let bdd_inp = AigerBdd.bdd_of_valuation inputs in
   let bdd = Cudd.bddAnd bdd_val bdd_inp in
-  let update = AigerBdd.updates game in
+  let update = AigerBdd.Circuit.updates game in
   let new_val = 
     AigerBdd.VariableMap.fold
       (fun var _ accu -> 
@@ -21,7 +23,24 @@ let successors game valuation inputs =
       ) valuation AigerBdd.VariableMap.empty
   in new_val
 
-  
+
+let input_inputs_compact =  
+  Printf.printf "%s [%d,%d] ?\n> " name 0 (exp size - 1);
+  let b = ref (read_int ()) in 
+  List.fold_left
+    (fun state name -> 
+      let size = Aiger.size_symbol aiger name in
+      let rec loop state i = 
+	if i = size then state 
+	else
+	  let new_state = 
+	    AigerBdd.VariableMap.add (AigerBdd.Variable.find (name,i)) ((b lsr i) mod 2 = 1) state
+	  in loop new_state (i+1)
+
+      in loop state 0
+    ) 
+    AigerBdd.VariableMap.empty
+    (Aiger.inputs aiger)
 
 let input_inputs aiger =
   List.fold_left
@@ -29,19 +48,14 @@ let input_inputs aiger =
       let size = Aiger.size_symbol aiger name in
       Printf.printf "%s [%d,%d] ?\n> " name 0 (exp size - 1);
       let b = read_int () in 
-      (*if size = 1 then 
-	(Printf.printf "%s = var %d\n" name (AigerBdd.Variable.to_int (AigerBdd.Variable.find (name,None)));
-	 AigerBdd.VariableMap.add (AigerBdd.Variable.find (name,None)) (b=1) state)
-      else*)
-	let rec loop state i = 
-	  if i = size then state 
-	  else
-	    ((*Printf.printf "%s[%d] = var %d\n" name i (AigerBdd.Variable.to_int (AigerBdd.Variable.find (name,i)));*)
-	     let new_state = 
-	       AigerBdd.VariableMap.add (AigerBdd.Variable.find (AigerBdd.of_aiger_symbol (name,Some i))) ((b lsr i) mod 2 = 1) state
-	     in loop new_state (i+1))
+      let rec loop state i = 
+	if i = size then state 
+	else
+	  let new_state = 
+	    AigerBdd.VariableMap.add (AigerBdd.Variable.find (name,i)) ((b lsr i) mod 2 = 1) state
+	  in loop new_state (i+1)
 
-	in loop state 0
+      in loop state 0
     ) 
     AigerBdd.VariableMap.empty
     (Aiger.inputs aiger)
@@ -61,7 +75,7 @@ let main =
 	  let variables = 
 	    Array.mapi 
 	      (fun i lit -> 
-		let v = AigerBdd.Variable.find (AigerBdd.of_aiger_symbol (name,Some i))
+	       let v = AigerBdd.Variable.find (name,i) 
 					      (*try 
 		 with x -> if i = 0 then AigerBdd.Variable.find (name,None) else raise x*)
 	       in (v,false)
@@ -71,15 +85,20 @@ let main =
       )
   in
 
-  let game = AigerBdd.of_aiger aiger in
+  let game = AigerBdd.Circuit.of_aiger aiger in
 
-  let outputs_latches = List.rev_append (Aiger.outputs aiger) (Aiger.latches aiger) in
-  AigerBdd.print_valuation aiger outputs_latches state;
+  let outputs_latches = 
+    if display_latches 
+    then List.rev_append (Aiger.outputs aiger) (Aiger.latches aiger) 
+    else Aiger.outputs aiger
+  in
+
+  AigerBdd.Circuit.print_valuation aiger outputs_latches state;
   let rec loop state = 
     try 
       let inputs = input_inputs aiger in
       let new_state = successors game state inputs in
-      AigerBdd.print_valuation aiger outputs_latches new_state;
+      AigerBdd.Circuit.print_valuation aiger outputs_latches new_state;
       loop new_state
     with
     | End_of_file -> state
