@@ -20,9 +20,9 @@ let main =
     let old_inputs = List.map (Aiger.lit2string aig) aig.Aiger.inputs in
     let new_aig = List.fold_left 
       (fun a i -> 
-	if List.mem i old_inputs then a
-	else
+	(*if List.mem i old_inputs then a
+	else*)
 	  let a,v = Aiger.new_var a in
-	  Aiger.add_input a (Aiger.var2lit v) (i,None)) aig inputs in
-    Aiger.write new_aig stdout
+	  Aiger.add_input a (Aiger.var2lit v) (i,None)) Aiger.empty inputs in
+    Aiger.write (Aiger.compose new_aig aig) stdout
 
