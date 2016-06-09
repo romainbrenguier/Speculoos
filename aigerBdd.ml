@@ -5,12 +5,12 @@ let init aiger =
   try Cudd.init (aiger.Aiger.num_inputs+2*aiger.Aiger.num_latches+2)
   with Failure x -> Printf.eprintf "warning: %s\n" x
 
-type symbol = Aiger.Symbol.t (*string * int*)
-let of_aiger_symbol x = x (*function
+type symbol = string * int
+let of_aiger_symbol = function
   | name, Some i -> name, i
-  | name, None -> name, 0*)
-let to_aiger_symbol x = x (* (n,i) = n,Some i*)
-let symbol_to_string = Aiger.Symbol.to_string (* (n,i) = n^"_"^string_of_int i^"_"*)
+  | name, None -> name, 0
+let to_aiger_symbol (n,i) = n,Some i
+let symbol_to_string (n,i) = n^"<"^string_of_int i^">"
 
 module SymbolMap = Map.Make(struct type t = symbol let compare = compare end)
 module SymbolSet = Set.Make(struct type t = symbol let compare = compare end)
@@ -19,16 +19,20 @@ module Variable =
 struct
   type t = int
 
-  let to_string v = "Variable("^string_of_int v^")"
 
   let compare a b = a - b
   let last_variable = ref 0
   let table_variable = Hashtbl.create 20
+  let reverse_table = Hashtbl.create 20
+
+  let to_string v = "Variable("^string_of_int v^","^symbol_to_string (Hashtbl.find reverse_table v)^")"
+
   let new_variable symbol = 
     let i = !last_variable in
     last_variable := !last_variable + 2;
     Hashtbl.add table_variable symbol i;
-    (*(* Debug *) Printf.printf "new variable %s -> %d\n" (symbol_to_string symbol) i; *)
+    Hashtbl.add reverse_table i symbol;
+    (* (* Debug *) Printf.printf "new variable %s -> %d\n" (symbol_to_string symbol) i; *)
     i
     
   let find (l:symbol) = 
@@ -49,6 +53,7 @@ struct
   let of_lit aiger lit = 
     find (of_aiger_symbol (Aiger.lit2symbol aiger lit))
 
+  let max_var () = !last_variable
 end
 
 type variable = Variable.t
@@ -62,7 +67,7 @@ let map_of_aiger aiger =
     List.fold_left
       (fun m inp -> 
        let sym = Aiger.lit2symbol aiger inp in
-       (* Printf.printf "adding to map input %d (%s)\n" (Aiger.lit2int inp) (Aiger.Symbol.to_string sym); *)
+       (*Printf.printf "adding to map input %d (%s) -> %d\n" (Aiger.lit2int inp) (Aiger.Symbol.to_string sym) (Variable.find (of_aiger_symbol sym)); *)
 
        VariableMap.add (Variable.find (of_aiger_symbol sym)) inp m
       ) VariableMap.empty aiger.Aiger.inputs
@@ -70,7 +75,7 @@ let map_of_aiger aiger =
   List.fold_left
     (fun m (l,_) -> 
      let sym = Aiger.lit2symbol aiger l in
-     (*Printf.printf "adding to map latch %d (%s)\n" (Aiger.lit2int l) (Aiger.Symbol.to_string sym);*)
+     (*Printf.printf "adding to map latch %d (%s) -> %d\n" (Aiger.lit2int l) (Aiger.Symbol.to_string sym) (Variable.find (of_aiger_symbol sym));*)
      VariableMap.add (Variable.find (of_aiger_symbol sym)) l m
     ) m aiger.Aiger.latches
 
@@ -108,7 +113,12 @@ exception UndeclaredLit of Aiger.lit
 module BddMap = Map.Make(struct type t = Cudd.bdd let compare = Cudd.compare end)
 
 (* We should normalize the cache: ie no negated nodes *)
-let add_bdd_to_aiger aiger bdd v2l = 
+let add_bdd_to_aiger aiger v2l bdd = 
+  let v2l = VariableMap.merge 
+	      (fun k a b -> match a,b with 
+			  | Some x , _ | None , Some x -> Some x
+			  | _ -> None
+	      ) v2l (map_of_aiger aiger) in
   let cache = BddMap.empty in
 
   let rec aux bdd aig cache = 
@@ -166,29 +176,23 @@ let add_bdd_to_aiger aiger bdd v2l =
 	(aig,res,BddMap.add bdd res cache)
 
   in 
-(*  try *)
   let aig,res,_ = aux bdd aiger cache in
   aig,res
-(*  with Aiger.BadAnd(x,y,z) -> 
-    Printf.printf "bad and %d %d %d\n" (Aiger.lit2int x) (Aiger.lit2int y) (Aiger.lit2int z);
-    raise (UndeclaredLit(x))
-
-*)
 
 
 let bdds_to_aiger ~inputs ~latches ~outputs =
   (* mapping variable to litterals *)
   let v2l = VariableMap.empty in
   let aig = Aiger.empty in
-  let v2l,aig = 
+  let aig = 
     List.fold_left
-      (fun (v2l,aig) i -> 
-       (* (* Debug *) Printf.eprintf "adding %s<%d>\n" (fst i) (snd i); *)
+      (fun aig i -> 
+       (* (* Debug *) Printf.eprintf "adding %s<%d>\n" (fst i) (snd i);  *)
        let aig,var = Aiger.new_var aig in
        let lit = Aiger.var2lit var in
-       VariableMap.add (Variable.find i) lit v2l,
+       (* VariableMap.add (Variable.find i) lit v2l,*)
        Aiger.add_input aig lit (to_aiger_symbol i)
-      ) (v2l,aig) inputs 
+      ) aig inputs
   in
   let v2l,aig = 
     List.fold_left
@@ -196,6 +200,7 @@ let bdds_to_aiger ~inputs ~latches ~outputs =
        (* (* Debug *) Printf.eprintf "adding %s<%d>\n" (fst l) (snd l);*)
        let aig,var = Aiger.new_var aig in
        let lit = Aiger.var2lit var in
+       (* Hashtbl.add mapping l lit;*)
        VariableMap.add (Variable.find l) lit v2l,
        aig
       ) (v2l,aig) latches
@@ -203,15 +208,15 @@ let bdds_to_aiger ~inputs ~latches ~outputs =
   let aig =
     List.fold_left
       (fun aig (l,bdd) ->
-       let aig,lit = add_bdd_to_aiger aig bdd v2l in
-       let var = Variable.find l  in
+       let aig,lit = add_bdd_to_aiger aig v2l bdd in
+       let var = Variable.find l in
        Aiger.add_latch aig (VariableMap.find var v2l) lit (to_aiger_symbol l)
       ) aig latches 
   in 
   let aig =
     List.fold_left
       (fun aig (o,bdd) ->
-       let aig,lit = add_bdd_to_aiger aig bdd v2l in
+       let aig,lit = add_bdd_to_aiger aig v2l bdd in
        let aig = Aiger.add_output aig lit (to_aiger_symbol o) in
        aig 
       ) aig outputs 
@@ -254,7 +259,13 @@ let bdd_to_aiger ~inputs ~latches ~outputs ~wires bdd =
 let variables_aiger aiger = 
   (* set of variables *)
   let vs = VariableSet.empty in
-  let vs = List.fold_left (fun vs inp -> VariableSet.add (Variable.find (of_aiger_symbol (Aiger.lit2symbol aiger inp))) vs) vs (List.rev_append aiger.Aiger.inputs aiger.Aiger.outputs) in
+
+  let vs = 
+    List.fold_left
+      (fun vs inp -> 
+       VariableSet.add (Variable.find (of_aiger_symbol (Aiger.lit2symbol aiger inp))) vs
+      ) vs (List.rev_append aiger.Aiger.inputs aiger.Aiger.outputs) 
+  in
   let vs = List.fold_left (fun vs (l,_) -> VariableSet.add (Variable.find (of_aiger_symbol (Aiger.lit2symbol aiger l))) vs) vs aiger.Aiger.latches in
   vs
 
@@ -332,30 +343,143 @@ let compute_updates aiger =
      let litterals = Aiger.name_to_literals aiger name in
      Array.iteri 
        (fun i lit ->
-	 (* Warning: several output can have the same litteral *)
-	 try Hashtbl.add updates (Variable.find (name,Some i)) (Hashtbl.find gate_bdd lit)
-	 with Not_found  -> 
-	   try
-	     if i = 0 then 
-	       Hashtbl.add updates (Variable.find (name,None)) (Hashtbl.find gate_bdd lit)
-	     else raise Not_found
-	   with Not_found ->
-	     Printf.eprintf "gate %d not found\n" (Aiger.lit2int lit);
-	     raise Not_found
+	(* Warning: several output can have the same litteral *)
+	try Hashtbl.add updates (Variable.find (name,i)) (Hashtbl.find gate_bdd lit)
+	with Not_found  -> 
+	  (*if i = 0 then 
+	    try Hashtbl.add updates (Variable.find (name,None)) (Hashtbl.find gate_bdd lit)
+	    with Not_found  -> *)
+	  (*else raise Not_found*)
+	  Printf.eprintf "gate %d not found\n" (Aiger.lit2int lit);
+	  raise Not_found
        ) litterals
     ) (Aiger.outputs aiger);
-  
+
   updates
 
 
+let valuation_of_list list = 
+  List.fold_left (fun accu (x,b) -> VariableMap.add x b accu) VariableMap.empty list
+
+let rec fixpoint f x =
+  let y = f x in if Cudd.equal y x then x else fixpoint f y
+
+
+
+let reorder_aiger aiger =
+  let ands = Hashtbl.create aiger.Aiger.num_ands in
+  let mapping = Hashtbl.create aiger.Aiger.num_ands in
+  List.iter (fun (a,b,c) -> Hashtbl.add ands a (a,b,c)) aiger.Aiger.ands;
+
+
+  let add_mapping k v = 
+    if Aiger.sign k 
+    then Hashtbl.add mapping (Aiger.aiger_not k) (Aiger.aiger_not v)
+    else Hashtbl.add mapping k v
+  in
+	     
+  let find_mapping r = 
+    let m = Hashtbl.find mapping (Aiger.strip r) in
+    if Aiger.sign r then Aiger.aiger_not m else m
+  in
+
+  add_mapping Aiger.aiger_true Aiger.aiger_true;
+  add_mapping Aiger.aiger_false Aiger.aiger_false;
+
+  let max_lit = 0 in
+  let max_lit = 
+    List.fold_left 
+      (fun ml a -> 
+       add_mapping a (Aiger.int2lit (ml+2)); 
+       ml + 2
+      ) max_lit aiger.Aiger.inputs 
+  in
+  let max_lit = 
+    List.fold_left 
+      (fun ml (a,_) -> 
+       add_mapping a (Aiger.int2lit (ml+2)); 
+       ml + 2
+      ) max_lit aiger.Aiger.latches
+  in
+
+
+  let rec explore gates max_lit a = 
+    try gates, find_mapping a, max_lit
+    with Not_found ->
+      (*if (* Aiger.lit2int a < 2 * (aiger.Aiger.num_latches + aiger.Aiger.num_inputs + 1) *) 
+	
+      then gates, a, max_lit
+      else*)
+	let (lhs,rhs0,rhs1) = Hashtbl.find ands a in
+	let gates,striped0,max_lit = explore gates max_lit (Aiger.strip rhs0) in 
+	let new_rhs0 = if Aiger.sign rhs0 then Aiger.aiger_not striped0 else striped0 in
+	let gates,striped1,max_lit = explore gates max_lit (Aiger.strip rhs1) in 
+	let new_rhs1 = if Aiger.sign rhs1 then Aiger.aiger_not striped1 else striped1 in
+	let gate = Aiger.int2lit (max_lit + 2) in
+	add_mapping lhs gate;
+	(gate,new_rhs0, new_rhs1)::gates, gate,  max_lit+2
+  in
+
+  let gates,max_lit = 
+    List.fold_left
+      (fun (accu,max_lit) (a,_,_) -> 
+       let (a,_,m) = explore accu max_lit a in a,m
+      ) (* ([],2 * (aiger.Aiger.num_latches +  aiger.Aiger.num_inputs)) aiger.Aiger.ands *)
+      ([],max_lit) aiger.Aiger.ands 
+  in
+
+  let inputs = List.map find_mapping aiger.Aiger.inputs in
+
+  let latches,gates,max_lit = 
+    List.fold_left
+      (fun (latches,gates,max_lit) (l,r) -> 
+       let (g,nr,m) = explore gates max_lit r in
+       (find_mapping l, nr) :: latches, g , m
+      ) ([],gates,max_lit) aiger.Aiger.latches 
+  in
+
+  let outputs,gates,max_lit =  
+    List.fold_left
+      (fun (outputs,gates,max_lit) o ->
+       let (g,no,m) = explore gates max_lit o in
+       find_mapping o :: outputs, g, m
+      ) ([],gates,max_lit) aiger.Aiger.outputs  
+  in
+
+  let symbols = Aiger.SymbolMap.map find_mapping aiger.Aiger.symbols in
+  
+  let abstract = 
+    Aiger.LitMap.fold
+      (fun l s accu -> 
+       try Aiger.LitMap.add (find_mapping l) s accu
+       with Not_found -> 
+	 Printf.eprintf "Warning in AigerBdd.reorder_aiger: literal %d not found\n" (Aiger.lit2int l);
+	 accu
+      )  aiger.Aiger.abstract Aiger.LitMap.empty in
+
+  {aiger with 
+    inputs = inputs; 
+    ands = List.rev gates; 
+    latches = List.rev latches; outputs=outputs; 
+    num_ands = List.length gates;
+    num_latches = List.length latches;
+    num_outputs =  List.length outputs;
+    num_inputs =  List.length inputs;
+    symbols=symbols; abstract=abstract; maxvar=max_lit/2}
+
+
+
+module Circuit = 
+  struct
 
 type t = 
   {
     updates:(Variable.t , Cudd.bdd) Hashtbl.t;
     variables: VariableSet.t;
     next_variables: VariableSet.t;
-    array_variables: int array;
-    array_next_variables: int array;
+    map: Aiger.lit VariableMap.t;
+    array_variables: Variable.t array;
+    array_next_variables: Variable.t array;
     composition_vector: Cudd.bdd array;
   }
 
@@ -365,6 +489,7 @@ let next_variables p = p.next_variables
 let array_variables p = p.array_variables
 let array_next_variables p = p.array_next_variables
 let composition_vector p = p.composition_vector
+let map p = p.map
 
 let of_aiger aiger = 
   let updates = compute_updates aiger in
@@ -373,23 +498,19 @@ let of_aiger aiger =
   let array_variables = Array.of_list (VariableSet.elements variables) in
   let array_next_variables = Array.of_list (VariableSet.elements next_variables) in
   let composition_vector = 
-    Array.init (aiger.Aiger.maxvar * 2 + 2) (* should it really be this value ? *)
+    Array.init (* (aiger.Aiger.maxvar * 2 + 2) (* should it really be this value ? *)*)
+      (Variable.max_var ())
 	       (fun i -> 
 		try Hashtbl.find updates (i-1)
 		with Not_found -> Cudd.bddTrue())
   in
+  let map = map_of_aiger aiger in
   { updates = updates; variables=variables; next_variables = next_variables;
     array_variables=array_variables; array_next_variables = array_next_variables;
-    composition_vector=composition_vector;}
+    composition_vector=composition_vector; map=map}
 
 let rename_configuration bdd variables next_variables =
   Cudd.bddSwapVariables bdd variables next_variables
-
-let rec fixpoint f x =
-  let y = f x in if Cudd.equal y x then x else fixpoint f y
-
-let valuation_of_list list = 
-  List.fold_left (fun accu (x,b) -> VariableMap.add x b accu) VariableMap.empty list
 
 
 let print_valuation aiger names valuation = 
@@ -399,18 +520,9 @@ let print_valuation aiger names valuation =
       let value = ref 0 in
       for i = size - 1 downto 0 do
 	(value := 2 * !value + 
-	   (
-	     try 
-	       if VariableMap.find (Variable.find (name,Some i)) valuation
-	       then 1 else 0
-	     with Not_found ->
-	       if i = 0 
-	       then 
-		 if VariableMap.find (Variable.find (name,None)) valuation
-		 then 1 else 0
-	       else raise Not_found
-	   ));
-      (*Printf.printf "%s.(%d) (= var %d): %b\n" name i (Variable.to_int (Variable.find (name,i))) (VariableMap.find (Variable.find (name,i)) valuation);*)
+		    (if VariableMap.find (Variable.find (name,i)) valuation
+	    then 1 else 0));
+	(*Printf.printf "%s.(%d) (= var %d): %b\n" name i (Variable.to_int (Variable.find (name,i))) (VariableMap.find (Variable.find (name,i)) valuation);*)
 	
       done;
       Printf.printf "%s = %d\n" name !value
@@ -425,13 +537,14 @@ let initial_state aiger =
 	 let variables = 
 	   Array.mapi 
 	     (fun i lit -> 
-	       try
-		 let v = Variable.find (name, Some i) 
-		 in (v,false)
-	       with Not_found ->
-		 if i = 0 then (Variable.find (name,None), false)
-		 else raise Not_found
+	       let v = Variable.find (name,i) 
+	       in (v,false)
 	     ) literals
 	 in List.rev_append (Array.to_list variables) accu
        ) [] (List.rev_append (Aiger.latches aiger) (Aiger.outputs aiger))
     )
+
+
+
+
+end

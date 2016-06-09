@@ -1,6 +1,8 @@
-<aigerBdd.*> or <speculoos.*> or <speculoosCompiler.*> or <synthesis.*> or <simulation.*> or <boolean.*> or <integer.*>: use_ocaml-aiger, use_ocaml-cudd
+<*.ml>: use_ocaml-aiger, use_ocaml-cudd
+<*.mli>: use_ocaml-aiger, use_ocaml-cudd
+<*.byte>: use_ocaml-aiger, use_ocaml-cudd
+<*.native>: use_ocaml-aiger, use_ocaml-cudd
 <pa_speculog.*>: pp(camlp4o  pa_extend.cmo q_MLast.cmo), use_ocaml-aiger, use_ocaml-cudd, camlp4
-<speculogAdd.*> or <speculogSynth.*>: use_ocaml-aiger, use_ocaml-cudd
 <expression.*>: use_ocaml-aiger
 <parser.*>: pp(camlp4o), use_ocaml-aiger
 <type.*>: pp(camlp4o), use_ocaml-cudd, use_ocaml-aiger
