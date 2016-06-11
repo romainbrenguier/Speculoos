@@ -9,7 +9,7 @@ let () =
       | After_rules ->
 	flag ["doc";"use_ocaml-aiger"] (S[A "-I"; P "../../ocaml-aiger/_build"]);
 	flag ["ocaml";"compile";"use_ocaml-aiger"] (S[A "-I"; P "../../ocaml-aiger/_build"]);
-	flag ["ocaml";"link";"use_ocaml-aiger";"byte"] (P "../../ocaml-aiger/_build/aiger.cma");
+	flag ["ocaml";"link";"use_ocaml-aiger";"byte"] (S[P "../../ocaml-aiger/_build/aiger.cma"; P "../../ocaml-aiger/_build/aigerImperative.cma"]);
 	flag ["ocaml";"link";"use_ocaml-aiger";"native"] (S[P "str.cmxa"; P "../../ocaml-aiger/_build/aiger.cmx"]);
 	flag ["ocaml";"compile";"use_ocaml-cudd"] (S[A "-I"; P "../../ocaml-cudd/_build/"]);
 	flag ["ocaml";"compile";"syntax_extension"] 

@@ -7,6 +7,7 @@ type t =
 | EInt of Integer.t
 | EArray of t array
 | ERecord of (string * t) list
+| EConstr of (string * t)
 
 (*(** Declarations form type *)
 val input : string -> Type.t -> Speculog.declaration * t 
@@ -55,6 +56,7 @@ val match_case : Type.t -> t -> string -> Type.t * t
 val to_type : t -> Type.t
 
 (** {2 Operations} *)
+(* Most of them are duplicates of integer functions. *)
 val neg : t -> t
 val implies : t -> t -> t
 val equiv : t -> t -> t
@@ -73,7 +75,6 @@ val minus : t -> t -> t
 val mult : t -> t -> t
 val div : t -> t -> t
 val modulo : t -> t -> t
-val next : t -> t
 val ite : t -> t -> t -> t
 
 (** Selects the element in the array that is indexed by the first argument *)

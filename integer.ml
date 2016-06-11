@@ -1,5 +1,5 @@
 open Common
-
+  
 type t = Boolean.t array
 
 let make array = array
@@ -8,10 +8,10 @@ let bool b =
   if b then make [| Boolean.True |] 
   else make [| Boolean.False |] 
 
-
 let of_array array = 
   Array.init (Array.length array) (fun i -> if array.(i) then Boolean.True else Boolean.False)
 
+let to_boolean_array a = a
 
 let int a = 
   let size = log a in
@@ -19,14 +19,12 @@ let int a =
     Array.init size (fun i -> if a / (exp i) mod 2 = 0 then Boolean.False else Boolean.True)
   in array
 
-let next a = Array.map Boolean.next a
+(*let next a = Array.map Boolean.next a*)
 
-let to_boolean_array a = a
 let size a = Array.length (to_boolean_array a)
 
 let get a j = 
   if j >= size a || j < 0 then Boolean.False else (to_boolean_array a).(j) 
-
 
 let select array list =
   let size = 
@@ -78,11 +76,12 @@ let to_string b =
 
 let get_expr a j = of_boolean (get a j) 
 
+let var_name name i = name^"<"^string_of_int i^">"
 let var name size = 
-  make (Array.init size (fun i -> Boolean.var name i))
+  make (Array.init size (fun i -> Boolean.var (var_name name i)))
 
 let bool_var name = 
-  of_boolean (Boolean.simple name)
+  of_boolean (Boolean.var name)
 
 let size_max l = 
   let rec aux accu = function | [] -> accu | a :: l -> aux (max accu (Array.length a)) l

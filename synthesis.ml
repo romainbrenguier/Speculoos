@@ -85,32 +85,24 @@ let iter start last f x =
 
 
 let var = Integer.var
-let simple name = Integer.of_boolean (Boolean.simple name)
 
-let input name = function
-  | Some size ->
-    DList (make_vector (fun x -> decl_input x) name size),
-    var name size
-  | None -> decl_input (name,None), simple name
+let input ?(size=1) name =
+  DList (make_vector (fun x -> decl_input x) name size),
+  var name size
     
-let output name = function
-  | Some size ->
-    DList (make_vector (fun x -> decl_output x) name size),
-    var name size
-  | None -> decl_output (name,None), simple name
+let output ?(size=1) name =
+  DList (make_vector (fun x -> decl_output x) name size),
+  var name size
 
-let reg name = function
-  | Some size ->
-    DList (make_vector (fun x -> decl_reg x) name size),
-    var name size
-  | None -> decl_reg (name,None), simple name
+let reg ?(size=1) name =
+  DList (make_vector (fun x -> decl_reg x) name size),
+  var name size
 
-let wire name = function
-  | Some size ->
-    DList (make_vector (fun x -> decl_wire x) name size),
-    var name size
-  | None -> decl_wire (name,None), simple name
+let wire ?(size=1) name = 
+  DList (make_vector (fun x -> decl_wire x) name size),
+  var name size
 
+let inp ?(a=1) = a
 
 
 module Constraint =
@@ -123,19 +115,19 @@ struct
     List.fold_left (fun accu x -> Cudd.bddAnd accu x) (Cudd.bddTrue()) cl
 
   let rec of_expr expr = match expr with
-    | Boolean.EVar (x,i) -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.find (x,Some i))
-    | Boolean.ESimple x -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.find (x,None))
+    | Boolean.EVar x -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.find (x))
+  (*  | Boolean.ESimple x -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.find (x,None))
     | Boolean.ENext (x,i) -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.next (AigerBdd.Variable.find (x,Some i)))
     | Boolean.ESimpleNext x -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.next (AigerBdd.Variable.find (x,None)))
-
+  *)
     | Boolean.EForall (vl,e) -> 
       let variables = 
 	List.fold_left
 	  (fun accu e -> 
 	   match e with 
-	   | Boolean.EVar (x,i) -> AigerBdd.Variable.find (x,Some i) :: accu
-	   | Boolean.ESimple x -> AigerBdd.Variable.find (x,None) :: accu
-	   | _ -> failwith "In Speculog.Constraint.of_expr: universal quantification on expressions that are not variables"
+	   | Boolean.EVar x -> AigerBdd.Variable.find x :: accu
+	   (*| Boolean.ESimple x -> AigerBdd.Variable.find (x,None) :: accu*)
+    | _ -> failwith "In Speculog.Constraint.of_expr: universal quantification on expressions that are not variables"
 	  ) [] vl 
       in
       let cube = AigerBdd.Variable.make_cube variables in
@@ -146,8 +138,8 @@ struct
       List.fold_left
 	(fun accu e -> 
 	 match e with 
-	 | Boolean.EVar (x,i) -> AigerBdd.Variable.find (x,Some i) :: accu
-	 | Boolean.ESimple x -> AigerBdd.Variable.find (x,None) :: accu
+	 | Boolean.EVar x -> AigerBdd.Variable.find x :: accu
+	 (*| Boolean.ESimple x -> AigerBdd.Variable.find (x,None) :: accu*)
 	 | _ -> failwith "In Speculog.Constraint.of_expr: existential quantification on expressions that are not variables"
 	) [] vl 
     in
@@ -193,6 +185,8 @@ let add_synthesized declarations constraints aiger =
   let outputs = Aiger.outputs aiger in
   let latches = Aiger.latches aiger in  
   let decl = declarations in
+  failwith "Synthesis.add_synthesized: unimplemented"
+(*
   let decl = 
     List.fold_left 
       (fun decl n -> 
@@ -215,7 +209,8 @@ let add_synthesized declarations constraints aiger =
       ) decl outputs
   in
   synthesize decl constraints
-      
+*)
+    
 let constraint_synthesis declarations = function 
   | hd :: tl -> 
      List.fold_left 
@@ -228,15 +223,18 @@ module SymbolSet = AigerBdd.SymbolSet
 
 let names_in_boolean_expr expr = 
   let rec aux accu = function 
-    | Boolean.EVar (name,i) | Boolean.ENext (name,i) -> SymbolSet.add (name,Some i) accu 
+    | Boolean.EVar name -> SymbolSet.add name accu 
+(*(name,i) | Boolean.ENext (name,i) -> SymbolSet.add (name,Some i) accu 
     | Boolean.ESimple name | Boolean.ESimpleNext name -> SymbolSet.add (name,None) accu 
+*)
 								      
     | Boolean.EExists (tl,e) 
     | Boolean.EForall(tl,e) -> (* Variables in tl should be removed *)
       List.fold_left
 	(fun accu -> function 
-	| Boolean.EVar (name,i) -> SymbolSet.remove (name,Some i) accu
-	| Boolean.ESimple name -> SymbolSet.remove (name,None) accu
+	| Boolean.EVar name -> SymbolSet.remove name accu
+	(*| Boolean.EVar (name,i) -> SymbolSet.remove (name,Some i) accu
+	| Boolean.ESimple name -> SymbolSet.remove (name,None) accu*)
 	| _ -> failwith "In Speculog.names_in_boolean_expr: quantification over an expression that is not a variables"
 	) (aux accu e) tl
     | Boolean.ENot t -> aux accu t
@@ -292,17 +290,17 @@ let functional_synthesis (*declarations*) updates =
 	  Array.fold_left 
 	    (fun (lb,ob,i) b_var ->
 	      match b_var with 
-	      | Boolean.EVar (s,io) -> 
+	      (*| Boolean.EVar (s,io) -> 
 		if SymbolSet.mem (s,Some io) latches
 		then (((s,Some io),Constraint.of_expr (Integer.get expr i))::lb,ob,i+1)
 		else if SymbolSet.mem (s,Some io) outputs
 		then (lb,((s,Some io),Constraint.of_expr (Integer.get expr i))::ob,i+1)
-		else failwith ("In Speculog.functional_synthesis: the variable "^s^" is neither a latch nor an output")
-	      | Boolean.ESimple s -> 
-		if SymbolSet.mem (s,None) latches
-		then (((s,None),Constraint.of_expr (Integer.get expr i))::lb,ob,i+1)
-		else if SymbolSet.mem (s,None) outputs
-		then (lb,((s,None),Constraint.of_expr (Integer.get expr i))::ob,i+1)
+		else failwith ("In Speculog.functional_synthesis: the variable "^s^" is neither a latch nor an output")*)
+	      | Boolean.EVar s -> 
+		if SymbolSet.mem s latches
+		then ((s,Constraint.of_expr (Integer.get expr i))::lb,ob,i+1)
+		else if SymbolSet.mem s outputs
+		then (lb,(s,Constraint.of_expr (Integer.get expr i))::ob,i+1)
 		else failwith ("In Speculog.functional_synthesis: the variable "^s^" is neither a latch nor an output")
 	      | _ -> failwith "In Speculog.functional_synthesis: the expression on the left should be a variable"
 	    ) (lb,ob,0) ba_var 

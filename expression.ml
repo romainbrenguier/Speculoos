@@ -6,7 +6,7 @@ type t =
 | EInt of Integer.t
 | EArray of t array
 | ERecord of (string * t) list
-(*| EUnion of 'a Integer.t * 'a Integer.t*)
+| EConstr of (string * t)
 
 let to_string = 
   let rec aux = function
@@ -213,7 +213,7 @@ let select a list = apply1 (fun x -> Integer.select x list) a
   | EInt x -> EInt (Integer.select x list)
   | _ -> failwith "In Expression.select: this is not an integer"*)
 
-let neg,next = match List.map apply1 [Integer.neg;Integer.next] with [a;b] -> a,b | _ -> failwith "wrong number of results"
+let neg = apply1 Integer.neg
 
 let apply1_bool op a =   
   let rec aux = function 

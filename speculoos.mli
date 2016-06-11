@@ -98,4 +98,7 @@ val compile : ?filename:string -> t -> unit
     renaming variables [ai] into [bi], the list of newly 
     created output variables is given as argument to gen, to generate
     the final AIG. In the end outputs are hidden. *)
-val use_module : Aiger.t -> inputs:((string * Expression.t) list) -> outputs:((string * string) list) -> (Expression.t list -> Aiger.t) -> Aiger.t
+
+(** Not implemented yet because compose is still missing from AigerImperative *)
+(*val use_module : Aiger.t -> inputs:((string * Expression.t) list) -> outputs:((string * string) list) -> (Expression.t list -> Aiger.t) -> Aiger.t
+*)

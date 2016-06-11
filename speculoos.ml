@@ -159,13 +159,13 @@ let compile ?(filename="") a =
 let to_symbols aiger t = 
   let rec aux = function
     | EUnit -> []
-    | EBool (Boolean.EVar (s,i)) -> [s,Some i]
+    | EBool (Boolean.EVar (s)) -> [s]
     | EBool _ -> failwith "in Speculoos.to_symbols: the value is not a Boolean variable"
     | EInt i -> 
       let array = Integer.to_boolean_array i in
       Array.fold_left
 	(fun accu b -> match b with 
-	| Boolean.EVar (s,i) -> (s,Some i) :: accu
+	| Boolean.EVar s -> s :: accu
 	| _ -> failwith "in Speculoos.to_symbols: the value contains an expressions which is not a Boolean variable"
 	) [] array
     | EArray a -> 
@@ -179,13 +179,15 @@ let rename aiger s typ name =
   let v = var name typ in
   let s1,s2 = to_symbols aiger u, to_symbols aiger v in
   let renaming = List.combine s1 s2 in
-  Aiger.rename aiger renaming
+  let rename x = try List.assoc x renaming with Not_found -> x in
+  AigerImperative.rename aiger rename
 
 let hiding aiger s typ = 
   let u = var s typ in
   let s = to_symbols aiger u in
-  List.fold_left Aiger.hide aiger s
+  List.iter (AigerImperative.hide aiger) s
 
+(*
 let use_module aiger ~inputs ~outputs generate =
   let aiger = 
     List.fold_left (fun aig (s,t) -> 
@@ -209,3 +211,4 @@ let use_module aiger ~inputs ~outputs generate =
   let composed = Aiger.compose aiger gen_aiger in
   (*let hiden = List.fold_left (fun aig (r,s) -> Aiger.full_hide aig s) composed outputs in*)
   composed
+*)

@@ -5,12 +5,14 @@ let init aiger =
   try Cudd.init (aiger.Aiger.num_inputs+2*aiger.Aiger.num_latches+2)
   with Failure x -> Printf.eprintf "warning: %s\n" x
 
-type symbol = string * int
+type symbol = string
+
+let symbol_to_string s = s
+
 let of_aiger_symbol = function
-  | name, Some i -> name, i
-  | name, None -> name, 0
-let to_aiger_symbol (n,i) = n,Some i
-let symbol_to_string (n,i) = n^"<"^string_of_int i^">"
+  | name, Some i -> name^"<"^string_of_int i^">"
+  | name, None -> name
+let to_aiger_symbol n = n,None
 
 module SymbolMap = Map.Make(struct type t = symbol let compare = compare end)
 module SymbolSet = Set.Make(struct type t = symbol let compare = compare end)
@@ -340,7 +342,8 @@ let compute_updates aiger =
 
   List.iter 
     (fun name -> 
-     let litterals = Aiger.name_to_literals aiger name in
+      failwith "in AigerBdd.ml : not implemented"
+     (*let litterals = Aiger.name_to_literals aiger name in
      Array.iteri 
        (fun i lit ->
 	(* Warning: several output can have the same litteral *)
@@ -352,7 +355,7 @@ let compute_updates aiger =
 	  (*else raise Not_found*)
 	  Printf.eprintf "gate %d not found\n" (Aiger.lit2int lit);
 	  raise Not_found
-       ) litterals
+       ) litterals*)
     ) (Aiger.outputs aiger);
 
   updates
@@ -518,14 +521,16 @@ let print_valuation aiger names valuation =
     (fun name ->
       let size = Aiger.size_symbol aiger name in
       let value = ref 0 in
+      failwith "not implemented"
+	(*
       for i = size - 1 downto 0 do
 	(value := 2 * !value + 
-		    (if VariableMap.find (Variable.find (name,i)) valuation
+	   (if VariableMap.find (Variable.find (name,i)) valuation
 	    then 1 else 0));
 	(*Printf.printf "%s.(%d) (= var %d): %b\n" name i (Variable.to_int (Variable.find (name,i))) (VariableMap.find (Variable.find (name,i)) valuation);*)
 	
       done;
-      Printf.printf "%s = %d\n" name !value
+      Printf.printf "%s = %d\n" name !value*)
     ) names
     
 
@@ -535,11 +540,12 @@ let initial_state aiger =
        (fun accu name -> 
 	 let literals = Aiger.name_to_literals aiger name in
 	 let variables = 
-	   Array.mapi 
+	   failwith "unimplemented"
+	     (*Array.mapi 
 	     (fun i lit -> 
 	       let v = Variable.find (name,i) 
 	       in (v,false)
-	     ) literals
+	     ) literals*)
 	 in List.rev_append (Array.to_list variables) accu
        ) [] (List.rev_append (Aiger.latches aiger) (Aiger.outputs aiger))
     )

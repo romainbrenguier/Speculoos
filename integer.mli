@@ -38,8 +38,6 @@ val implies : t -> t -> t
 (** Equality. *)
 val equals : t -> t -> Boolean.t
 
-val next : t -> t
- 
 (** Addition *)
 val add : t -> t -> t
 
