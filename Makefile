@@ -1,6 +1,6 @@
 
 
-all: speculoosCompiler.byte
+all: speculoosCompiler.byte circuit.cmo
 
 pa_speculog.cmo: 
 	ocamlbuild expression.cmx
@@ -15,6 +15,9 @@ cycles: _build/examples/scheduling.byte
 
 simulation.byte: *.ml
 	ocamlbuild simulation.byte
+
+circuit.cmo: *.ml
+	ocamlbuild circuit.cmo
 
 speculoosCompiler.byte: *.ml
 	ocamlbuild speculoosCompiler.byte

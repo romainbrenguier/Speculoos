@@ -25,5 +25,5 @@ val for_each : (int * int) list -> (int -> t) -> t
 val of_bdd : Cudd.bdd -> AigerBdd.symbol list -> t
 val of_list : t list -> t
 val add_to_aiger : AigerImperative.t -> t -> AigerImperative.lit
-
+val to_bdd : t -> Cudd.bdd
 

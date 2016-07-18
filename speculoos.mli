@@ -90,6 +90,7 @@ val seq : t list -> t
 (** {2 Synthesis } *)
 
 val to_aiger : t -> Aiger.t
+val to_aig_imp : t -> AigerImperative.t
 
 (** If no filename is provided the aiger file is produced on the standard output *)
 val compile : ?filename:string -> t -> unit

@@ -101,7 +101,7 @@ let initialize initial updates =
     
 
 
-let functional_synthesis instructions =
+let functional_synthesis synthesis_function instructions =
   let tab = Hashtbl.create 100 in
   let add_when condition x up = 
     try Hashtbl.replace tab x (ite condition up (Hashtbl.find tab x))
@@ -141,7 +141,7 @@ let functional_synthesis instructions =
 
   aux (bool true) instructions;
   let list = Hashtbl.fold (fun x up accu -> (x,up) :: accu) tab [] in
-  Synthesis.functional_synthesis (List.map finalize list)
+  synthesis_function (List.map finalize list)
 
 let to_aiger instructions = 
   let inits = extract_init instructions in
@@ -149,7 +149,15 @@ let to_aiger instructions =
     if inits <> [] 
     then initialize inits instructions 
     else instructions
-  in functional_synthesis ups
+  in functional_synthesis Synthesis.functional_synthesis ups
+
+let to_aig_imp instructions = 
+  let inits = extract_init instructions in
+  let ups = 
+    if inits <> [] 
+    then initialize inits instructions 
+    else instructions
+  in functional_synthesis SynthesisImp.functional_synthesis ups
 
 let compile ?(filename="") a =
   let aig = to_aiger a in

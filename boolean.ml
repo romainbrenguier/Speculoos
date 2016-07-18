@@ -201,3 +201,45 @@ let rec add_to_aiger aiger = function
   | EOr list -> add_to_aiger aiger (ENot (EAnd (List.map (fun x -> ENot x) list)))
   | x -> failwith ("in Boolean.add_to_aiger: unexpected expression : "^to_string x)
 	      
+let rec to_bdd = function
+  | EVar x -> BddVariable.to_bdd (BddVariable.find x)
+    (*  | ESimple x -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.find (x,None))
+	| ENext (x,i) -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.next (AigerBdd.Variable.find (x,Some i)))
+	| ESimpleNext x -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.next (AigerBdd.Variable.find (x,None)))
+  *)
+  | EForall (vl,e) -> 
+    let variables = 
+      List.fold_left
+	(fun accu e -> 
+	  match e with 
+	  | EVar x -> BddVariable.find x :: accu
+    (*| ESimple x -> AigerBdd.Variable.find (x,None) :: accu*)
+	  | _ -> failwith "In to_bdd: universal quantification on expressions that are not variables"
+	) [] vl 
+    in
+    let cube = BddVariable.make_cube variables in
+    Cudd.bddUnivAbstract (to_bdd e) cube
+      
+  | EExists (vl,e) -> 
+    let variables = 
+      List.fold_left
+	(fun accu e -> 
+	  match e with 
+	  | EVar x -> BddVariable.find x :: accu
+	 (*| ESimple x -> AigerBdd.Variable.find (x,None) :: accu*)
+	  | _ -> failwith "In to_bdd: existential quantification on expressions that are not variables"
+	) [] vl 
+    in
+    let cube = BddVariable.make_cube variables in
+    Cudd.bddExistAbstract (to_bdd e) cube
+
+  | ENot e -> Cudd.bddNot (to_bdd e)
+  | EAnd (hd :: tl) -> List.fold_left Cudd.bddAnd (to_bdd hd) (List.map to_bdd tl)
+  | EAnd [] -> Cudd.bddTrue()
+  | EOr (hd :: tl) ->  List.fold_left Cudd.bddOr (to_bdd hd) (List.map to_bdd tl)
+  | EOr [] -> Cudd.bddFalse()
+    (*    | EXor (e,f) ->  Cudd.bddNot (Cudd.bddOr (Cudd.bddAnd (of_expr e) (of_expr f)) (Cudd.bddAnd (Cudd.bddNot (of_expr e)) (Cudd.bddNot (of_expr f))))
+	  | EEqual (e,f) -> of_expr (ENot (EXor (e,f)))*)
+  (* | EList el -> of_list (List.map to_bdd el)*)
+  | True -> Cudd.bddTrue()
+  | False -> Cudd.bddFalse()

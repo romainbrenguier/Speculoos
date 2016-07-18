@@ -9,11 +9,6 @@ type t =
 | ERecord of (string * t) list
 | EConstr of (string * t)
 
-(*(** Declarations form type *)
-val input : string -> Type.t -> Speculog.declaration * t 
-val output : string -> Type.t -> Speculog.declaration * t 
-val reg : string -> Type.t -> Speculog.declaration * t 
-val wire : string -> Type.t -> Speculog.declaration * t *)
 (** Variable declaration *)
 val var : string -> Type.t -> t
 
