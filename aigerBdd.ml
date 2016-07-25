@@ -342,20 +342,19 @@ let compute_updates aiger =
 
   List.iter 
     (fun name -> 
-      failwith "in AigerBdd.ml : not implemented"
-     (*let litterals = Aiger.name_to_literals aiger name in
-     Array.iteri 
-       (fun i lit ->
+      let litterals = Aiger.name_to_literals aiger name in
+      Array.iteri 
+	(fun i lit ->
 	(* Warning: several output can have the same litteral *)
-	try Hashtbl.add updates (Variable.find (name,i)) (Hashtbl.find gate_bdd lit)
-	with Not_found  -> 
+	  try Hashtbl.add updates (Variable.find (of_aiger_symbol (name,Some i))) (Hashtbl.find gate_bdd lit)
+	  with Not_found  -> 
 	  (*if i = 0 then 
 	    try Hashtbl.add updates (Variable.find (name,None)) (Hashtbl.find gate_bdd lit)
 	    with Not_found  -> *)
 	  (*else raise Not_found*)
-	  Printf.eprintf "gate %d not found\n" (Aiger.lit2int lit);
-	  raise Not_found
-       ) litterals*)
+	    Printf.eprintf "gate %d not found\n" (Aiger.lit2int lit);
+	    raise Not_found
+	) litterals
     ) (Aiger.outputs aiger);
 
   updates
@@ -521,16 +520,14 @@ let print_valuation aiger names valuation =
     (fun name ->
       let size = Aiger.size_symbol aiger name in
       let value = ref 0 in
-      failwith "not implemented"
-	(*
       for i = size - 1 downto 0 do
 	(value := 2 * !value + 
-	   (if VariableMap.find (Variable.find (name,i)) valuation
+	   (if VariableMap.find (Variable.find (of_aiger_symbol (name,Some i))) valuation
 	    then 1 else 0));
 	(*Printf.printf "%s.(%d) (= var %d): %b\n" name i (Variable.to_int (Variable.find (name,i))) (VariableMap.find (Variable.find (name,i)) valuation);*)
 	
       done;
-      Printf.printf "%s = %d\n" name !value*)
+      Printf.printf "%s = %d\n" name !value
     ) names
     
 

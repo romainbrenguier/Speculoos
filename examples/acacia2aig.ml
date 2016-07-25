@@ -6,7 +6,7 @@ open Expression
 
 let lexer = Genlex.make_lexer ["State"; "initial"; ":"; "("; ")"; ","; "!"; "&&"; "U"; "T"; "F"; "||"; "{"; "}"; "to"; "state"; "labeled"]
 
-type conjunction = (bool * Expression.t) list
+type conjunction = (bool * string) list
 type dnf_formula = conjunction list
 type state = { id: int; init: bool; trans: (int * (dnf_formula * conjunction) list) list }
 
@@ -20,17 +20,25 @@ let parse =
  
 
   let rec parse_conjunction accu = parser
-    | [< 'Genlex.Kwd "!"; e = parse_var_conjunction; f = parse_remainder_conjunction ((false,e)::accu) >] ->  f
-    | [< e = parse_var_conjunction; f = parse_remainder_conjunction ((true,e)::accu) >] ->  f
+    | [< 'Genlex.Kwd "!"; e = parse_var_conjunction;
+	 f = parse_remainder_conjunction (match e with None -> accu 
+	 | Some v ->  ((false,v)::accu))
+      >] -> f
+    | [< e = parse_var_conjunction; f = parse_remainder_conjunction
+      (match e with None ->  accu 
+      | Some v -> (true,v)::accu)
+      >] -> f 
+	
   and parse_var_conjunction = parser
-      | [< 'Genlex.Kwd "T" >] -> Expression.bool true
-      | [< 'Genlex.Kwd "F" >] -> Expression.bool false
+      | [< 'Genlex.Kwd "T" >] -> None 
+      | [< 'Genlex.Kwd "F" >] -> failwith "Acacia2aig: should not encounter false in a conjunction"
       | [< 'Genlex.Ident v >] ->  
-	try Hashtbl.find tab_variables v 
-	with Not_found -> 
+	if Hashtbl.mem tab_variables v then Some v
+	else
 	  let var = Expression.var v Type.bool in
 	  Hashtbl.add tab_variables v var;
-	  var
+	  Some v
+
   and parse_remainder_conjunction accu = parser
       | [< 'Genlex.Kwd "&&"; e = parse_conjunction accu >] -> e
       | [< >] -> accu
@@ -71,17 +79,17 @@ let parse =
   in
 
   parser
-  | [< 'Genlex.Ident transition; 'Genlex.Ident system; 'Genlex.Kwd "{"; e=parse_transition_system []; 'Genlex.Kwd "}" >] ->  e
+  | [< 'Genlex.Ident transition; 'Genlex.Ident system; 'Genlex.Kwd "{"; e=parse_transition_system []; 'Genlex.Kwd "}" >] ->  e, tab_variables
 
 
-let conjunction_to_expr = 
-  List.fold_left (fun e (b,x) -> if b then e $& x else e $& neg x) (Expression.bool true) 
+let conjunction_to_expr string_to_var = 
+  List.fold_left (fun e (b,x) -> if b then e $& string_to_var x else e $& neg (string_to_var x)) (Expression.bool true) 
 
-let dnf_to_expr = 
-  List.fold_left (fun e c -> e $| conjunction_to_expr c) (Expression.bool false)
+let dnf_to_expr string_to_var = 
+  List.fold_left (fun e c -> e $| conjunction_to_expr string_to_var c) (Expression.bool false)
 
     
-let to_speculog transition_system = 
+let to_speculog (transition_system,tab_variables) = 
   let nb_states = List.length transition_system in
   let tab = Hashtbl.create nb_states in
 
@@ -97,7 +105,7 @@ let to_speculog transition_system =
 	(fun (target,update_list) ->
 	  List.iter (fun (inputs,outputs) ->
 	    (*let expr = List.fold_left (fun e (b,x) -> if b then e $& x else e $& neg x) (Expression.bool true) inputs in*)
-	    let expr = dnf_to_expr inputs in
+	    let expr = dnf_to_expr (Hashtbl.find tab_variables) inputs in
 	    let s_and_expr = expr $& (state_var $= Expression.int state.id) in
 	    List.iter (fun (pos,out) ->
 	      if pos 
@@ -106,6 +114,9 @@ let to_speculog transition_system =
 		  let p = Hashtbl.find output_tab out in
 		  Hashtbl.replace output_tab out (p $| s_and_expr)
 		with Not_found -> Hashtbl.add output_tab out s_and_expr
+	      else
+		if not (Hashtbl.mem output_tab out)
+		then Hashtbl.replace output_tab out (bool false)
 	    ) outputs;
 	    try 
 	      let p = Hashtbl.find tab target in
@@ -121,7 +132,7 @@ let to_speculog transition_system =
       Expression.ite e (Expression.int k) accu) tab (Expression.int 0)
   in
   
-  Hashtbl.fold (fun k e accu -> add_update accu k e) output_tab  (Update (state_var, update_state))
+  Hashtbl.fold (fun k e accu -> add_update accu (Hashtbl.find tab_variables k) e) output_tab  (Update (state_var, update_state))
     
       
 

@@ -16,14 +16,16 @@ let map_of_aiger aiger =
   let m =
     List.fold_left
       (fun m inp -> 
-       let sym = Aiger.lit2string_exn aiger inp in
-       VariableMap.add (Variable.find sym) inp m
+	match Aiger.lit2string aiger inp with
+	 | Some sym -> VariableMap.add (Variable.find sym) inp m
+	 | None -> failwith ("AigerImpBdd.map_of_aiger: wrong input, lit: "^string_of_int inp)
       ) VariableMap.empty (Aiger.LitSet.elements aiger.Aiger.inputs)
   in 
   Hashtbl.fold 
     (fun l _ m -> 
-     let sym = Aiger.lit2string_exn aiger l in
-     VariableMap.add (Variable.find sym) l m
+      match Aiger.lit2string aiger l with
+      | Some sym -> VariableMap.add (Variable.find sym) l m
+      | None -> failwith ("AigerImpBdd.map_of_aiger: wrong latch, lit: "^string_of_int l)
     ) aiger.Aiger.latches m 
 
 
@@ -61,6 +63,7 @@ module BddMap = Map.Make(struct type t = Cudd.bdd let compare = Cudd.compare end
 
 (* We should normalize the cache: ie no negated nodes *)
 let add_bdd_to_aiger aig v2l bdd = 
+  print_endline "add_bdd_to_aiger";
   let v2l = VariableMap.merge 
     (fun k a b -> match a,b with 
     | Some x , _ | None , Some x -> Some x
