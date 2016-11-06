@@ -66,7 +66,6 @@ module BddMap = Map.Make(struct type t = Cudd.bdd let compare = Cudd.compare end
 
 (* We should normalize the cache: ie no negated nodes *)
 let add_bdd_to_aiger aig v2l bdd = 
-  print_endline "add_bdd_to_aiger";
   let v2l = VariableMap.merge 
     (fun k a b -> match a,b with 
     | Some x , _ | None , Some x -> Some x
@@ -119,6 +118,7 @@ let bdds_to_aiger ~inputs ~latches ~outputs =
 	VariableMap.add (Variable.find i) lit v2l
       ) v2l inputs
   in
+
   let v2l = 
     List.fold_left
       (fun v2l (l,_) -> 
@@ -126,17 +126,20 @@ let bdds_to_aiger ~inputs ~latches ~outputs =
 	VariableMap.add (Variable.find l) lit v2l
       ) v2l latches
   in
+
   List.iter
     (fun (l,bdd) ->
        let lit = add_bdd_to_aiger aig v2l bdd in
        let var = Variable.find l in
        Aiger.set_latch_update aig (VariableMap.find var v2l) lit 
     ) latches ;
+
   List.iter
     (fun (o,bdd) ->
       let lit = add_bdd_to_aiger aig v2l bdd in
       Aiger.set_output aig o lit
     ) outputs;
+
   aig 
 
 

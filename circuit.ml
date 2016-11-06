@@ -92,8 +92,11 @@ let variables_aiger aiger =
 
   let vs = 
     List.fold_left
-      (fun vs inp -> 
-	VariableSet.add (BddVariable.find (Aiger.lit2string_exn aiger inp)) vs
+      (fun vs inp ->
+	if inp > 1
+	then 
+	  VariableSet.add (BddVariable.find (Aiger.lit2string_exn aiger inp)) vs
+	else vs
       ) vs (List.rev_append (Aiger.LitSet.elements aiger.Aiger.inputs) (Aiger.LitSet.elements aiger.Aiger.outputs))
   in
   let vs = 
@@ -103,7 +106,9 @@ let variables_aiger aiger =
   in vs
 
 
-let of_aiger aiger = 
+let of_aiger aiger =
+  print_endline "Circuit of AIG:";
+  Aiger.write stdout aiger;    
   let updates = compute_updates aiger in
   let variables = variables_aiger aiger in
   let next_variables = VariableSet.fold (fun x accu -> VariableSet.add (BddVariable.next x) accu) variables VariableSet.empty in

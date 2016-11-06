@@ -157,7 +157,9 @@ let to_aig_imp instructions =
     if inits <> [] 
     then initialize inits instructions 
     else instructions
-  in functional_synthesis SynthesisImp.functional_synthesis ups
+  in
+  let aig = functional_synthesis SynthesisImp.functional_synthesis ups in
+  aig
 
 let compile ?(filename="") a =
   let aig = to_aiger a in
