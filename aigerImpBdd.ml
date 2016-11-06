@@ -18,7 +18,10 @@ let map_of_aiger aiger =
       (fun m inp -> 
 	match Aiger.lit2string aiger inp with
 	 | Some sym -> VariableMap.add (Variable.find sym) inp m
-	 | None -> failwith ("AigerImpBdd.map_of_aiger: wrong input, lit: "^string_of_int inp)
+	 | None ->
+	    if inp = 1 || inp = 0
+	    then VariableMap.add (Variable.of_int (inp)) inp m
+	    else failwith ("AigerImpBdd.map_of_aiger: wrong input, lit: "^string_of_int inp)
       ) VariableMap.empty (Aiger.LitSet.elements aiger.Aiger.inputs)
   in 
   Hashtbl.fold 
