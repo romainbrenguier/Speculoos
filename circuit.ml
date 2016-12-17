@@ -78,7 +78,11 @@ let compute_updates aiger =
       try 
 	(* Warning: several output can have the same litteral *)
 	let bdd = Hashtbl.find gate_bdd lit in
-	Hashtbl.add updates (BddVariable.find (Aiger.lit2string_exn aiger lit)) bdd
+	(* Warning an output could have the same name than a latch *)
+	let bdd_var = BddVariable.find (Aiger.lit2string_exn aiger lit) in
+	Printf.printf "adding bdd for ouput %s\n" (BddVariable.to_string bdd_var);
+	Cudd.dumpDot "update_output.dot" bdd;
+	Hashtbl.add updates bdd_var bdd
       with Not_found  -> 
 	Printf.eprintf "warning in Circuit.compute_uptades: gate %d not found\n" lit;
 	raise Not_found
@@ -90,14 +94,17 @@ let variables_aiger aiger =
   (* set of variables *)
   let vs = VariableSet.empty in
 
-  let vs = 
-    List.fold_left
-      (fun vs inp ->
-	if inp > 1
-	then 
-	  VariableSet.add (BddVariable.find (Aiger.lit2string_exn aiger inp)) vs
-	else vs
-      ) vs (List.rev_append (Aiger.LitSet.elements aiger.Aiger.inputs) (Aiger.LitSet.elements aiger.Aiger.outputs))
+  let vs =
+    Aiger.LitSet.fold
+      (fun i inp vs ->
+	VariableSet.add (BddVariable.find (Aiger.lit2string_exn aiger inp)) vs
+      ) aiger.Aiger.inputs vs
+  in
+  let vs =
+    Aiger.LitSet.fold
+      (fun i out vs ->
+	VariableSet.add (BddVariable.find (Aiger.lit2string_exn aiger out)) vs
+      ) aiger.Aiger.outputs vs
   in
   let vs = 
     Hashtbl.fold (fun l _ vs -> 
@@ -144,7 +151,7 @@ let print_valuation aiger names valuation =
     ) names
     
 
-let initial_state aiger = 
+let initial_state aiger =
   AigerBdd.valuation_of_list 
     (List.fold_left 
        (fun accu name -> 

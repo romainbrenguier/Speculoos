@@ -1,3 +1,10 @@
+
+# Warning
+
+This repository of Speculoos is no longer updated and Speculoos is now
+a part of Reglisse: https://github.com/romainbrenguier/Reglisse
+
+
 # Speculoos
 
 Speculoos (Specification Logics for Synthesis) is a set of tools for Register Transfer Level hardware description.
