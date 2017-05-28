@@ -1,3 +1,10 @@
+(* 
+   Module: Vector. Implement a class vector with constant amortized time 
+           push_back, push_front, pop_back, pop_front and access at arbitrary
+           index.
+
+   Author: Romain Brenguier
+*)
 
 class ['a] vector (default_value:'a) =
 object(self)
@@ -27,7 +34,7 @@ object(self)
   method set i elt =
     array.((front_pos + i) mod capacity) <- elt
 
-  method resize size =
+  method private resize size =
     let arr = Array.make size self#front in
     (* copy elements between front_pos and capacity *)
     Array.blit array front_pos arr 0 (capacity - front_pos);
@@ -63,5 +70,17 @@ object(self)
     let ret = self#back in
     back_pos <- back_pos - 1;
     ret
-      
+
+  method iter f =
+    for i = 0 to self#size - 1
+    do
+      let () = f (self#get i) in ()
+    done;
+    
+  method iteri f =
+    for i = 0 to self#size - 1
+    do
+      let () = f i (self#get i) in ()
+    done;
+
 end 

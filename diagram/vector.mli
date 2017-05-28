@@ -28,4 +28,11 @@ object
 
   (* Set the value of the element at the given index *)
   method set : int -> 'a -> unit
+    
+  (* Applies a function to all elements in order *)
+  method iter : ('a -> unit) -> unit
+
+  (* Applies a function to all index and elements in order *)
+  method iteri : (int -> 'a -> unit) -> unit
+    
 end
