@@ -1,10 +1,4 @@
 
-# Warning
-
-This repository of Speculoos is no longer updated and Speculoos is now
-a part of Reglisse: https://github.com/romainbrenguier/Reglisse
-
-
 # Speculoos
 
 Speculoos (Specification Logics for Synthesis) is a set of tools for Register Transfer Level hardware description.
@@ -26,12 +20,12 @@ To install ocaml-cudd, go to the parent directory of Speculoos then enter the fo
 > && make
 
 When this is done run:
-> make
+> make -C src
 
 This compiles the Speculoos Compiler and the necessary libraries.
 To test the compiler on some examples, run:
 
-> make test
+> make -C examples 
 
 ## The Speculoos language
 The Speculoos compilers accepts some basic language that can be compiled to AIGER.
