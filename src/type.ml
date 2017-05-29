@@ -7,7 +7,6 @@ let array t i = Array(t,i)
 let record stl = Record stl
 let union stl = Union stl
 
-
 let rec to_string = function
   | Unit -> "unit"
   | Bool -> "bool"
