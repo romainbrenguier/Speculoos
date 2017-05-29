@@ -44,16 +44,6 @@ clean:
 doc:
 	ocamlbuild -tag use_ocaml-aiger speculoos.docdir/index.html
 
-test: speculoosCompiler.byte
-	./speculoosCompiler.byte examples/ex1.spec -o ex1.aig
-	./speculoosCompiler.byte examples/ex2.spec -o ex1.aig
-	./speculoosCompiler.byte examples/ex3.spec -o ex2.aig
-	./speculoosCompiler.byte examples/record.spec -o record.aig
-	./speculoosCompiler.byte examples/array.spec -o array.aig
-	./speculoosCompiler.byte examples/union.spec -o union.aig
-	./speculoosCompiler.byte examples/conditionals.spec -o conditionals.aig
-	./speculoosCompiler.byte examples/rising_edge.spec -o rising_edge.aig
-
 matrix: 
 	mkdir matrix
 	ocamlbuild -tag use_ocaml-cudd -tag use_ocaml-aiger examples/matrix.byte --
