@@ -8,7 +8,7 @@ TARGET=ex1.aig \
 	rising_edge.aig \
 	# Empty last line
 
-%.aig: %.spec
+%.aig: %.spec ../src/speculoosCompiler.byte
 	../src/speculoosCompiler.byte $< -o $@
 	diff $@ $@.ref
 
