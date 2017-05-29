@@ -81,25 +81,9 @@ let extract_init =
     | Init (a,b) -> (a,b) :: accu
   in aux []
 
-
 let initialize initial updates =
-  (*let decl, initialized = reg "initialized" Bool in*)
-  (*
-  let rec aux accu = function 
-    | Update(var,up) ->
-      let i = 
-	try List.assoc var initial
-	with Not_found -> bool false
-      in Update(var, ite initialized up i) :: accu
-    | When(t, e) -> When(t, aux e) :: accu
-    | If(t, e , f) -> ...
-      If(t, List.rev (List.fold_left aux [] tlist), List.rev (List.fold_left aux [] tlist2)) :: accu
-    | Seq tlist -> List.rev (List.fold_left aux [] tlist)
-  in*)
   let initialized = var "initialized" Type.Bool in
   Seq [Update(initialized,bool true);When(initialized,updates)] 
-    
-
 
 let functional_synthesis synthesis_function instructions =
   let tab = Hashtbl.create 100 in
@@ -124,7 +108,6 @@ let functional_synthesis synthesis_function instructions =
 	| EBool x, EInt y -> add_when condition (Integer.of_boolean x) (EInt y)
 	| EBool x, EBool y -> add_when condition (Integer.of_boolean x) (EBool y)
 	| EInt x, EBool y -> add_when condition x (EBool y)
-      (* (x,y) :: accu*)
 	| EArray arr1, EArray arr2 ->
 	  Array.iteri (fun i t -> aux_update (t,arr2.(i))) arr1
 	| ERecord stl1, ERecord stl2 ->
@@ -163,8 +146,13 @@ let to_aig_imp instructions =
 
 let compile ?(filename="") a =
   let aig = to_aiger a in
-  if filename = "" then Aiger.write aig stdout 
-  else (let outch = open_out filename in Aiger.write aig outch; close_out outch)
+  if filename = ""
+  then
+    Aiger.write aig stdout 
+  else
+    let outch = open_out filename in
+    Aiger.write aig outch;
+    close_out outch
 
 let to_symbols aiger t = 
   let rec aux = function
@@ -197,28 +185,3 @@ let hiding aiger s typ =
   let s = to_symbols aiger u in
   List.iter (AigerImperative.hide aiger) s
 
-(*
-let use_module aiger ~inputs ~outputs generate =
-  let aiger = 
-    List.fold_left (fun aig (s,t) -> 
-      let name = Common.tmp_name () in
-      let typ = to_type t in
-      let new_var = var name typ in
-      let input = functional_synthesis (Update(new_var, t)) in
-      let renamed = rename aig s typ name in
-      let aig = Aiger.compose input renamed in
-      hiding aig name typ
-    ) aiger inputs 
-  in
-  let aiger = Aiger.full_rename aiger outputs (*input_renaming*) in
-  let var_list = 
-    List.fold_left 
-      (fun accu (r,s) -> 
-	(var s (Type.int (Aiger.size_symbol aiger s))) :: accu
-      ) [] outputs
-  in
-  let gen_aiger = (*functional_synthesis*) (generate var_list) in
-  let composed = Aiger.compose aiger gen_aiger in
-  (*let hiden = List.fold_left (fun aig (r,s) -> Aiger.full_hide aig s) composed outputs in*)
-  composed
-*)
