@@ -165,6 +165,4 @@ let functional_synthesis updates =
   in
   AigerBdd.bdds_to_aiger (SymbolSet.elements inputs) latches_bdds outputs_bdds 
     
-let _declarations = []
-
 let print_aiger a = Aiger.write a stdout

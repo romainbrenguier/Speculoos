@@ -34,7 +34,4 @@ val synthesize : declaration list -> Boolean.t -> Aiger.t
 *)
 val functional_synthesis : (Integer.t * Integer.t) list -> Aiger.t
 
-(** list to keep track of currently declared variables *)
-val _declarations : declaration list
-
 val print_aiger : Aiger.t -> unit
