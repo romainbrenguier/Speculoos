@@ -19,8 +19,6 @@ let int a =
     Array.init size (fun i -> if a / (exp i) mod 2 = 0 then Boolean.False else Boolean.True)
   in array
 
-(*let next a = Array.map Boolean.next a*)
-
 let size a = Array.length (to_boolean_array a)
 
 let get a j = 
