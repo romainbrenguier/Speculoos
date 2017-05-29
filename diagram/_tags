@@ -1,0 +1,4 @@
+<exprToBdd.ml>: use_ocaml-cudd
+<exprToBddUnitTest.ml>: use_ocaml-cudd
+<*.byte>: use_ocaml-cudd
+<*.native>: use_ocaml-cudd
