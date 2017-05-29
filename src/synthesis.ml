@@ -85,81 +85,17 @@ let wire ?(size=1) name =
 
 let inp ?(a=1) = a
 
-module Constraint =
-struct
-  type t = Cudd.bdd
-  let of_bdd x = x
-  let to_bdd x = x
- 
-  let of_list cl = 
-    List.fold_left (fun accu x -> Cudd.bddAnd accu x) (Cudd.bddTrue()) cl
-
-  let rec of_expr expr = match expr with
-    | Boolean.EVar x -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.find (x))
-    | Boolean.EForall (vl,e) -> 
-      let variables = 
-	List.fold_left
-	  (fun accu e -> 
-	   match e with 
-	   | Boolean.EVar x -> AigerBdd.Variable.find x :: accu
-    | _ -> failwith "In Speculog.Constraint.of_expr: universal quantification on expressions that are not variables"
-	  ) [] vl 
-      in
-      let cube = AigerBdd.Variable.make_cube variables in
-      Cudd.bddUnivAbstract (of_expr e) cube
-
-    | Boolean.EExists (vl,e) -> 
-    let variables = 
-      List.fold_left
-	(fun accu e -> 
-	 match e with 
-	 | Boolean.EVar x -> AigerBdd.Variable.find x :: accu
-	 | _ -> failwith "In Speculog.Constraint.of_expr: existential quantification on expressions that are not variables"
-	) [] vl 
-    in
-    let cube = AigerBdd.Variable.make_cube variables in
-    Cudd.bddExistAbstract (of_expr e) cube
-
-    | Boolean.ENot e -> Cudd.bddNot (of_expr e)
-    | Boolean.EAnd (hd :: tl) -> List.fold_left Cudd.bddAnd (of_expr hd) (List.map of_expr tl)
-    | Boolean.EAnd [] -> Cudd.bddTrue()
-    | Boolean.EOr (hd :: tl) ->  List.fold_left Cudd.bddOr (of_expr hd) (List.map of_expr tl)
-    | Boolean.EOr [] -> Cudd.bddFalse()
-    | Boolean.EEqual (e,f) -> of_expr (Boolean.ENot (Boolean.EXor (e,f)))*)
-    | Boolean.EList el -> of_list (List.map of_expr el)
-    | Boolean.True -> Cudd.bddTrue()
-    | Boolean.False -> Cudd.bddFalse()
-
-  let expr_to_bdd e = to_bdd (of_expr e)
-
-  let of_exprs el = 
-    of_list (List.map of_expr el)
-
-  let for_each start last f =
-    iter start last (fun i c -> Cudd.bddAnd (f i) c) (Cudd.bddTrue())
-
-end
-
 exception NonSynthesizable of (Boolean.t * Boolean.t)
 
 let synthesize declarations constr =
   let types = of_declaration declarations in
-  let bdd = Constraint.expr_to_bdd constr in
+  let bdd = ExprToBdd.expr_to_bdd constr in
   try
     AigerBdd.bdd_to_aiger (inputs types) (registers types) (outputs types) (wires types) bdd
   with (AigerBdd.Unsatisfiable (aig,bdd)) -> 
     let expr = Boolean.of_bdd bdd (List.rev_append (inputs types) (registers types)) in
     raise (NonSynthesizable (constr,expr))
 
-    
-let constraint_synthesis declarations = function 
-  | hd :: tl -> 
-     List.fold_left 
-       (fun a b -> 
-	add_synthesized declarations b a
-       ) (synthesize declarations hd) tl
-  | _ -> failwith "In Speculog.constraint_synthesis: no constraint given"
-       
 module SymbolSet = AigerBdd.SymbolSet
 
 let names_in_boolean_expr expr = 
@@ -207,10 +143,10 @@ let types_of_updates updates =
   inputs, outputs, latches
 
 let functional_synthesis updates = 
-  let inputs,outputs,latches = types_of_updates updates in
-  let latches_bdds,outputs_bdds = 
+  let inputs, outputs, latches = types_of_updates updates in
+  let latches_bdds, outputs_bdds = 
     List.fold_left
-      (fun (lb,ob) (var,expr) -> 
+      (fun (lb, ob) (var, expr) -> 
 	let ba_var = Integer.to_boolean_array var in
 	let lb,ob,nb = 
 	  Array.fold_left 
@@ -218,9 +154,9 @@ let functional_synthesis updates =
 	      match b_var with 
 	      | Boolean.EVar s -> 
 		if SymbolSet.mem s latches
-		then ((s,Constraint.of_expr (Integer.get expr i))::lb,ob,i+1)
+		then ((s, ExprToBdd.expr_to_bdd (Integer.get expr i))::lb,ob,i+1)
 		else if SymbolSet.mem s outputs
-		then (lb,(s,Constraint.of_expr (Integer.get expr i))::ob,i+1)
+		then (lb,(s, ExprToBdd.expr_to_bdd (Integer.get expr i))::ob,i+1)
 		else failwith ("In Speculog.functional_synthesis: the variable "^s^" is neither a latch nor an output")
 	      | _ -> failwith "In Speculog.functional_synthesis: the expression on the left should be a variable"
 	    ) (lb,ob,0) ba_var 
