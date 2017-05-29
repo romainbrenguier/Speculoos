@@ -24,7 +24,6 @@ let next_token stream =
   | Genlex.Int i -> string_of_int i
   | Genlex.Char c -> "char")
 
-
 let remaining_tokens stream =
   let buf = Buffer.create 100 in
   let rec loop () = 
@@ -32,12 +31,12 @@ let remaining_tokens stream =
     loop ()
   in
   try loop () with _ ->  Buffer.contents buf
-   
 
 let display_infos = ref false
-let display_debug = ref false
-let display_warnings = ref false
 
+let display_debug = ref false
+
+let display_warnings = ref false
 
 let infos string = 
   if !display_infos then print_endline string
@@ -53,14 +52,13 @@ let starts_with prefix string =
   then String.sub string 0 (String.length prefix) = prefix
   else false
 
-
 let list_to_string list separator =
   match list with 
   | [] -> ""
   | hd :: tl -> List.fold_left (fun accu s -> accu^separator^s) hd tl
 
-
 let tmp_name_count = ref 0
+
 let tmp_name () =
   incr tmp_name_count;
   "_tmp_"^string_of_int !tmp_name_count
