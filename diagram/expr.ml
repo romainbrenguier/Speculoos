@@ -32,3 +32,13 @@ let rec expr_to_string = function
 
   | ExprDisjunction v ->
      "(" ^ v#to_string expr_to_string " || " ^ ")"
+
+let expr_equals a b =
+  let conj1 = new vector ExprFalse in
+  conj1#push_back a;
+  conj1#push_back b;
+  let conj2 = conj1#map (fun x -> ExprNot x) in
+  let disj = new vector ExprFalse in
+  disj#push_back (ExprConjunction conj1);
+  disj#push_back (ExprDisjunction conj2);
+  ExprDisjunction disj
