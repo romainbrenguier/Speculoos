@@ -19,8 +19,6 @@ let to_string =
       List.fold_left (fun accu (s,e) -> accu^s^"= ("^aux e^") ;") "{ " sel ^ "}"
   in aux 
 
-  
-
 let var name typ = 
   let rec aux prefix = function
     | Type.Unit -> EUnit
@@ -52,77 +50,6 @@ let var name typ =
 	
   in 
   aux name typ 
-
-
-
-(*
-let make decl name typ = 
-  let rec aux prefix = function
-    | Type.Unit -> [],EUnit
-    | Type.Bool -> let d,v = decl prefix None in [d],EBool v
-    | Type.Int i -> let d,v = decl prefix (Some i) in [d],EInt v
-
-    | Type.Array (t,i) -> 
-      let dv_array = 
-	Array.init i
-	  (fun i -> 
-	    let pre = Printf.sprintf "%s[%d]" prefix i in
-	    aux pre t) 
-      in
-      Array.fold_left (fun accu (d,i)-> List.rev_append d accu) [] dv_array,
-      EArray (Array.map snd dv_array)
-
-    | Type.Record st -> 
-      let dv_list =
-	List.map
-	  (fun (name,t) -> 
-	    let pre = Printf.sprintf "%s.%s" prefix name in
-	    let d,v = aux pre t in
-	    d , (name, v)
-	  ) st
-      in
-      List.fold_left (fun a (d,_) -> List.rev_append d a) [] dv_list,
-      ERecord (List.map snd dv_list)
-	
-    | Type.Union stl -> 
-       let max_size = List.fold_left (fun m (_,t) -> max (Type.size t) m) 0 stl in
-       aux prefix
-	   (Type.Record
-	      ["constr",Type.Int (log (List.length stl));
-	       "content",Type.Int max_size])
-	 
-  in 
-  let dec,var = aux name typ in
-  Synthesis.DList dec, var
-
-*)
-
-
-(*
-
-let declare decl name t = 
-  let rec aux prefix = function
-    | EUnit -> 
-    | EBool x | EInt x -> 
-      let v,dx = decl x in
-      v :: accu, dx :: d
-    | EArray a -> 
-      let _, accu = 
-	Array.fold_left
-	  (fun (i,accu) t -> 
-	    i+1,aux (Printf.sprintf "%s[%d]" prefix i) accu t
-	  ) (0,accu) a
-      in accu
-    | ERecord dl -> 
-      List.fold_left
-	(fun accu (name,t) -> 
-	  aux (Printf.sprintf "%s.%s" prefix name) accu t
-	) accu dl
-  in
-  let a = make name t in
-  Speculog.DList (aux name [] a), a
-*)
-
 
 let to_integer = function
   | EBool x -> Integer.of_boolean x 
@@ -208,10 +135,8 @@ let apply1 op a =
     | ERecord x -> ERecord (List.map (fun (n,f) -> (n,aux f)) x)
   in aux a
 
-let select a list = apply1 (fun x -> Integer.select x list) a
-(* match a with 
-  | EInt x -> EInt (Integer.select x list)
-  | _ -> failwith "In Expression.select: this is not an integer"*)
+let select a list =
+  apply1 (fun x -> Integer.select x list) a
 
 let neg = apply1 Integer.neg
 
@@ -224,11 +149,16 @@ let apply1_bool op a =
     | ERecord x -> ERecord (List.map (fun (n,f) -> (n,aux f)) x)
   in aux a
 
-let andR,orR,xorR = match List.map apply1_bool [Integer.andR;Integer.orR;Integer.xorR] with [a;b;c] -> a,b,c | _ -> failwith "wrong number of results"
+let andR, orR, xorR =
+  match List.map apply1_bool [Integer.andR;Integer.orR;Integer.xorR] with
+  | [a;b;c] -> a,b,c | _ -> failwith "wrong number of results"
   
 let implies,equiv,conj,disj,xor,add,minus,mult,div,modulo =
-  match List.map apply [Integer.implies;Integer.equiv;Integer.conj;Integer.disj;Integer.xor;Integer.add;Integer.minus;Integer.mult;Integer.div;Integer.modulo] with 
-  | [a;b;c;d;e;f;g;h;i;j] -> a,b,c,d,e,f,g,h,i,j
+  match List.map
+    apply [Integer.implies; Integer.equiv; Integer.conj; Integer.disj;
+	   Integer.xor; Integer.add; Integer.minus; Integer.mult;
+	   Integer.div; Integer.modulo] with 
+    | [a;b;c;d;e;f;g;h;i;j] -> a,b,c,d,e,f,g,h,i,j
   | _ -> failwith "wrong number of results"
 
 let unit = EUnit
@@ -273,8 +203,8 @@ let less_eq,less,greater_eq,greater =
   | [a;b;c;d] -> a,b,c,d
   | _ -> failwith "Wrong number of results"
 
-
 let ($@) = get
+
 let ($.) = field
 
 let ite i t e =
@@ -284,7 +214,6 @@ let ite i t e =
 
 let mux c x = 
   EInt (Integer.multiplex (to_integer c) (Array.map to_integer x))
-
 
 let of_int typ a = 
   let rec aux rem = function
@@ -325,17 +254,8 @@ let of_int typ a =
   match a with 
   | EInt i ->
     let res,rem = aux (Integer.to_boolean_array i) typ in
-    (* if Array.length rem > 0 
-    (*This can happen in union type *)
-       then 
-       (
-       Printf.printf "Result : %s\n" (to_string res);
-       Printf.printf "Remaing size : %d\n" (Array.length rem);
-       failwith "In Expression.of_int: element has not the correct size"
-       );*)
     res
   | _ -> failwith "In Expression.of_int: element is not an int"
-
 
 let to_int typ a = 
   let rec aux sum typ elt = match typ,elt with
@@ -371,7 +291,6 @@ let to_int typ a =
     | x , e -> failwith ("In Expression.to_int: the element is not of type "^Type.to_string x^", its value is "^to_string e)
 	
   in EInt (Integer.make (aux [| |] typ a))
-
 
 let constr typ name a = 
   match typ with
@@ -454,10 +373,6 @@ let for_some list f =
   in 
   List.fold_left treat_one (bool false) list
 
-
-
-
-
 let remove_input aiger inp = 
   let inputs = List.filter (fun l -> l <> inp) aiger.Aiger.inputs in
   let _,gates = List.fold_left 
@@ -472,89 +387,3 @@ let remove_input aiger inp =
     Aiger.ands = List.rev gates;
     Aiger.num_ands = List.length gates
   }
-
-(*  
-let set_latch aiger lit output =
-  (* let update = List.assoc lit aiger.Aiger.latches in*)
-  Common.debug (Printf.sprintf "setting latch %d -> %d\n" (Aiger.lit2int lit) (Aiger.lit2int output));
-  (*let aiger =
-    match Aiger.lit2tag aiger update with
-    | Input i -> remove_input aiger i
-    | _ -> Common.debug ("warning: the latch is not updated by an input"); aiger
-  in*)
-  let latches = List.map (fun (l,u) -> 
-    if l = lit then (l,output) else (l,u)
-  ) aiger.Aiger.latches
-  in
-  let outputs = List.filter (fun o -> o <> output) aiger.Aiger.outputs in
-  let aiger = {aiger with
-    Aiger.num_latches = List.length latches; (*aiger.Aiger.num_latches - 1;*)
-    Aiger.latches = latches; 
-    Aiger.num_outputs = List.length outputs; (*aiger.Aiger.num_outputs - 1;*)
-    Aiger.outputs = outputs}
-  in aiger	
-
-
-let make_latch name typ generate = 
-  let v = var name typ in
-  let tmp_name = Common.tmp_name () in
-  let fake = var tmp_name typ in
-  let tmp_name2 = Common.tmp_name () in
-  let fake_input = var tmp_name2 typ in
-  let tmp_name3 = Common.tmp_name () in
-  let next_value = var tmp_name3 typ in
-  let aig = functional_synthesis [Update(fake,v); Update(v, fake_input)] in
-  let generated = generate fake next_value in
-  let composed = Aiger.compose aig generated in
-  let lits_of_symbols = 
-    List.fold_left (fun accu (s,t) -> 
-      let u = 
-	try Aiger.symbol2lit composed t
-	with Not_found -> 
-	  Common.debug ("warning "^Aiger.Symbol.to_string s^","^Aiger.Symbol.to_string t^" not found\n"); 
-	  Aiger.aiger_false
-      in (Aiger.symbol2lit composed s, u) :: accu
-    ) []
-  in
-  
-  let lits = lits_of_symbols (List.combine (to_symbols composed v) (to_symbols composed next_value)) in
-  let with_latch = List.fold_left (fun aig (lit,olit) -> 
-    set_latch aig lit olit) composed lits 
-  in
-  let aiger = hiding with_latch tmp_name typ in
-
-  let lits_of_symbols = 
-    List.fold_left (fun accu s -> 
-      try Aiger.symbol2lit aiger s :: accu
-      with Not_found -> accu
-    ) []
-  in
-  let lits = lits_of_symbols (to_symbols aiger fake_input) in
-  let res = List.fold_left remove_input aiger lits in
-  res
-
-let test () = 
-  let union_type = Type.Union ["Int",Type.Int 2;"Bool",Type.Bool] in
-  let typ = Type.of_string "{i: Int of int 2 | Bool of bool; a : int 3} [4]" in
-  print_endline (Type.to_string typ);
-  let d,e = input "test" typ in
-  (*let f = to_expr (field (field (get e (EInt (Integer.int 3))) "i") "content") in*)
-  let f = field (get e (int 3)) "i" in
-  let m = match_with union_type f ["Int",(fun i -> int 0);"Bool",neg] in
-  print_endline (to_string m)
-  
-  
-  
-let main = 
-  if Filename.basename Sys.argv.(0) = "expression.byte" 
-  then
-    if Array.length Sys.argv < 1
-    then
-      Printf.printf "usage : %s\n" Sys.argv.(0)
-    else
-      test ()
-(*let stream = Stream.of_string Sys.argv.(1) in
-      let t = parse (lexer stream) in
-      print_endline (to_string t)*)
-
-*)
