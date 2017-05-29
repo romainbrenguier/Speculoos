@@ -22,22 +22,6 @@ let rec add_declaration types declaration = match declaration with
 let of_declaration dl =
   List.fold_left add_declaration AigerBdd.SymbolMap.empty dl
 
-(*
-let find_declaration dl name =
-  let rec aux dl = match dl with 
-    | [] -> None
-    | hd :: tl -> match hd with
-      | Input (x,i) | Output (x,i) | Reg (x,i) | Wire (x,i) when x = name -> Some hd
-      | DList dl -> (match aux dl with
-	| Some x -> Some x | None -> aux tl)
-      | _ -> aux tl
-  in aux dl
-
-let size_declaration decl = match decl with
-  | Input (_,i) | Output (_,i) | Reg (_,i) | Wire (_,i) -> i 
-  | _ -> None
-*)
-
 let inputs types = 
   AigerBdd.SymbolMap.fold 
     (fun _ declaration accu ->
@@ -53,7 +37,6 @@ let outputs types =
       | Output i -> i :: accu
       | _ -> accu
     ) types []
-
 
 let registers types = 
   AigerBdd.SymbolMap.fold 
@@ -77,12 +60,10 @@ let make_vector f name i =
     else aux (f (name,Some k) :: accu) (k-1)
   in aux [] (i-1)
 
-
 let iter start last f x = 
   let rec aux i accu = 
     if i > last then accu else aux (i+1) (f i accu)
   in aux start x
-
 
 let var = Integer.var
 
@@ -104,7 +85,6 @@ let wire ?(size=1) name =
 
 let inp ?(a=1) = a
 
-
 module Constraint =
 struct
   type t = Cudd.bdd
@@ -116,17 +96,12 @@ struct
 
   let rec of_expr expr = match expr with
     | Boolean.EVar x -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.find (x))
-  (*  | Boolean.ESimple x -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.find (x,None))
-    | Boolean.ENext (x,i) -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.next (AigerBdd.Variable.find (x,Some i)))
-    | Boolean.ESimpleNext x -> AigerBdd.Variable.to_bdd (AigerBdd.Variable.next (AigerBdd.Variable.find (x,None)))
-  *)
     | Boolean.EForall (vl,e) -> 
       let variables = 
 	List.fold_left
 	  (fun accu e -> 
 	   match e with 
 	   | Boolean.EVar x -> AigerBdd.Variable.find x :: accu
-	   (*| Boolean.ESimple x -> AigerBdd.Variable.find (x,None) :: accu*)
     | _ -> failwith "In Speculog.Constraint.of_expr: universal quantification on expressions that are not variables"
 	  ) [] vl 
       in
@@ -139,7 +114,6 @@ struct
 	(fun accu e -> 
 	 match e with 
 	 | Boolean.EVar x -> AigerBdd.Variable.find x :: accu
-	 (*| Boolean.ESimple x -> AigerBdd.Variable.find (x,None) :: accu*)
 	 | _ -> failwith "In Speculog.Constraint.of_expr: existential quantification on expressions that are not variables"
 	) [] vl 
     in
@@ -151,14 +125,12 @@ struct
     | Boolean.EAnd [] -> Cudd.bddTrue()
     | Boolean.EOr (hd :: tl) ->  List.fold_left Cudd.bddOr (of_expr hd) (List.map of_expr tl)
     | Boolean.EOr [] -> Cudd.bddFalse()
-(*    | Boolean.EXor (e,f) ->  Cudd.bddNot (Cudd.bddOr (Cudd.bddAnd (of_expr e) (of_expr f)) (Cudd.bddAnd (Cudd.bddNot (of_expr e)) (Cudd.bddNot (of_expr f))))
     | Boolean.EEqual (e,f) -> of_expr (Boolean.ENot (Boolean.EXor (e,f)))*)
     | Boolean.EList el -> of_list (List.map of_expr el)
     | Boolean.True -> Cudd.bddTrue()
     | Boolean.False -> Cudd.bddFalse()
 
   let expr_to_bdd e = to_bdd (of_expr e)
-
 
   let of_exprs el = 
     of_list (List.map of_expr el)
@@ -168,8 +140,8 @@ struct
 
 end
 
-
 exception NonSynthesizable of (Boolean.t * Boolean.t)
+
 let synthesize declarations constr =
   let types = of_declaration declarations in
   let bdd = Constraint.expr_to_bdd constr in
@@ -177,39 +149,8 @@ let synthesize declarations constr =
     AigerBdd.bdd_to_aiger (inputs types) (registers types) (outputs types) (wires types) bdd
   with (AigerBdd.Unsatisfiable (aig,bdd)) -> 
     let expr = Boolean.of_bdd bdd (List.rev_append (inputs types) (registers types)) in
-    (*AigerBdd.print_valuation aig (List.rev_append (Aiger.inputs aig) (Aiger.latches aig)) x;*)
     raise (NonSynthesizable (constr,expr))
 
-let add_synthesized declarations constraints aiger =
-  let inputs = Aiger.inputs aiger in
-  let outputs = Aiger.outputs aiger in
-  let latches = Aiger.latches aiger in  
-  let decl = declarations in
-  failwith "Synthesis.add_synthesized: unimplemented"
-(*
-  let decl = 
-    List.fold_left 
-      (fun decl n -> 
-	let d, _ = input n (Some (Aiger.size_symbol aiger n)) in
-	d :: decl
-      ) decl inputs
-  in
-  let decl = 
-    List.fold_left 
-      (fun decl n -> 
-	let d, _ = reg n (Some (Aiger.size_symbol aiger n)) in
-	d :: decl
-      ) decl latches
-  in
-  let decl = 
-    List.fold_left 
-      (fun decl n -> 
-	let d, _ = output n (Some (Aiger.size_symbol aiger n)) in
-	d :: decl
-      ) decl outputs
-  in
-  synthesize decl constraints
-*)
     
 let constraint_synthesis declarations = function 
   | hd :: tl -> 
@@ -224,17 +165,11 @@ module SymbolSet = AigerBdd.SymbolSet
 let names_in_boolean_expr expr = 
   let rec aux accu = function 
     | Boolean.EVar name -> SymbolSet.add name accu 
-(*(name,i) | Boolean.ENext (name,i) -> SymbolSet.add (name,Some i) accu 
-    | Boolean.ESimple name | Boolean.ESimpleNext name -> SymbolSet.add (name,None) accu 
-*)
-								      
     | Boolean.EExists (tl,e) 
-    | Boolean.EForall(tl,e) -> (* Variables in tl should be removed *)
+    | Boolean.EForall(tl,e) -> (* TODO: Variables in tl should be removed *)
       List.fold_left
 	(fun accu -> function 
 	| Boolean.EVar name -> SymbolSet.remove name accu
-	(*| Boolean.EVar (name,i) -> SymbolSet.remove (name,Some i) accu
-	| Boolean.ESimple name -> SymbolSet.remove (name,None) accu*)
 	| _ -> failwith "In Speculog.names_in_boolean_expr: quantification over an expression that is not a variables"
 	) (aux accu e) tl
     | Boolean.ENot t -> aux accu t
@@ -269,18 +204,9 @@ let types_of_updates updates =
        if SymbolSet.mem s read then o else SymbolSet.add s o
       )  write SymbolSet.empty
   in
-  (*(* Debug *)
-  print_endline "registers:";
-  SymbolSet.iter (fun (s,i) -> Printf.printf "%s<%d> ; " s (match i with None -> 0 | Some x -> x)) latches;
-  print_newline ();
-  print_endline "inputs:";
-  SymbolSet.iter (fun (s,i) -> Printf.printf "%s<%d> ; " s (match i with None -> 0 | Some x -> x)) inputs;
-  print_newline ();*)
-  inputs,outputs,latches
+  inputs, outputs, latches
 
-(* The declarations are unecessary, we could deduce them from the expressions *)
-let functional_synthesis (*declarations*) updates = 
-  (*let types = of_declaration declarations in*)
+let functional_synthesis updates = 
   let inputs,outputs,latches = types_of_updates updates in
   let latches_bdds,outputs_bdds = 
     List.fold_left
@@ -290,12 +216,6 @@ let functional_synthesis (*declarations*) updates =
 	  Array.fold_left 
 	    (fun (lb,ob,i) b_var ->
 	      match b_var with 
-	      (*| Boolean.EVar (s,io) -> 
-		if SymbolSet.mem (s,Some io) latches
-		then (((s,Some io),Constraint.of_expr (Integer.get expr i))::lb,ob,i+1)
-		else if SymbolSet.mem (s,Some io) outputs
-		then (lb,((s,Some io),Constraint.of_expr (Integer.get expr i))::ob,i+1)
-		else failwith ("In Speculog.functional_synthesis: the variable "^s^" is neither a latch nor an output")*)
 	      | Boolean.EVar s -> 
 		if SymbolSet.mem s latches
 		then ((s,Constraint.of_expr (Integer.get expr i))::lb,ob,i+1)
