@@ -21,19 +21,21 @@ val select : t -> (int * int) list -> t
 
 (** Bitwise negation. *)
 val neg : t -> t 
+
 (** Bitwise conjunction. *)
 val conj : t -> t -> t
+
 (** Bitwise disjunction. *)
 val disj : t -> t -> t
 
 (** Bitwise xor *)
 val xor : t -> t -> t
+
 (** Bitwise equality *)
 val equiv : t -> t -> t
+
 (** Bitwise implication *)
 val implies : t -> t -> t
-
-
 
 (** Equality. *)
 val equals : t -> t -> Boolean.t
@@ -63,6 +65,7 @@ val div : t -> t -> t
 
 (** Selects the element in the array that is indexed by the first argument *)
 val multiplex : t -> t array -> t
+
 (** If Then Else *)
 val ite : Boolean.t -> t -> t -> t
 
