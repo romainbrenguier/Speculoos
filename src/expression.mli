@@ -20,7 +20,6 @@ val array : t array -> t
 val record : (string * t) list -> t
 val constr : Type.t -> string -> t -> t
 
-
 (** {2 Access} *)
 
 (** Should only be applied to simple types (bool and int) *)
@@ -33,8 +32,6 @@ val get : t -> t -> t
 (** Infix notation for get *)
 val ($@) : t -> t -> t
 val size : t -> int
-
-
 
 (** Should only be applied to tuples *)
 val field : t -> string -> t
@@ -80,8 +77,6 @@ val andR : t -> t
 val orR : t -> t
 val xorR : t -> t
 
-
-(* val apply : (unit Integer.t -> unit Integer.t -> unit Integer.t) -> t -> t -> t*)
 (** Should be applied to Boolean expressions *)
 val for_each : (int * int) list -> (int -> t) -> t
 val for_some : (int * int) list -> (int -> t) -> t
@@ -90,5 +85,3 @@ val for_some : (int * int) list -> (int -> t) -> t
 val to_string : t -> string 
 val to_int : Type.t -> t -> t
 val of_int : Type.t -> t -> t
-
-
