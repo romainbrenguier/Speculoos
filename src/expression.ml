@@ -358,8 +358,6 @@ let match_with typ a patterns =
     expr
 	
   | _ -> failwith "In Expression.match_with: type is not a union"
-  
-
 
 let for_each list f =
   let treat_one accu (start,last) =
@@ -373,7 +371,8 @@ let for_some list f =
   in 
   List.fold_left treat_one (bool false) list
 
-let remove_input aiger inp = 
+let remove_input aiger inp =
+  assert(false);
   let inputs = List.filter (fun l -> l <> inp) aiger.Aiger.inputs in
   let _,gates = List.fold_left 
     (fun (to_remove,accu) (a,b,c) -> 
@@ -387,3 +386,9 @@ let remove_input aiger inp =
     Aiger.ands = List.rev gates;
     Aiger.num_ands = List.length gates
   }
+
+let forall variable expr =
+  let EInt int_var = variable in
+  let EBool bool_var = expr in
+  let bool_vars = Integer.to_boolean_array int_var in
+  EBool (Boolean.forall (Array.to_list bool_vars) bool_var)

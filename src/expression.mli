@@ -1,9 +1,9 @@
 (** Speculoos expressions *)
 
 (** Type of expressions *)
-type t = 
+type t =
 | EUnit
-| EBool of Boolean.t 
+| EBool of Boolean.t
 | EInt of Integer.t
 | EArray of t array
 | ERecord of (string * t) list
@@ -37,7 +37,7 @@ val size : t -> int
 val field : t -> string -> t
 (** infix notation for field *)
 val ($.) : t -> string -> t
-(** Should only be applied to integers 
+(** Should only be applied to integers
     Select the bits given by the list, each pairs corresponding to an interval. *)
 val select : t -> (int * int) list -> t
 
@@ -61,7 +61,7 @@ val less : t -> t -> t
 val greater_eq : t -> t -> t
 val greater : t -> t -> t
 val left_shift : t -> int -> t
-val right_shift : t -> int -> t 
+val right_shift : t -> int -> t
 val add : t -> t -> t
 val minus : t -> t -> t
 val mult : t -> t -> t
@@ -71,6 +71,10 @@ val ite : t -> t -> t -> t
 
 (** Selects the element in the array that is indexed by the first argument *)
 val mux : t -> t array -> t
+
+(** Universal quantification: first argument should be integer and
+    second one Boolean *)
+val forall : t -> t -> t
 
 (** Bitwise reductions *)
 val andR : t -> t
@@ -82,6 +86,6 @@ val for_each : (int * int) list -> (int -> t) -> t
 val for_some : (int * int) list -> (int -> t) -> t
 
 (** {2 Conversions} *)
-val to_string : t -> string 
+val to_string : t -> string
 val to_int : Type.t -> t -> t
 val of_int : Type.t -> t -> t
