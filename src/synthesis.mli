@@ -1,25 +1,18 @@
 (** Verilog-like declarations *)
-type declaration =
-| Input of AigerBdd.symbol 
-| Output of AigerBdd.symbol 
-| Reg of AigerBdd.symbol
-| Wire of AigerBdd.symbol
-| DList of declaration list
+type declaration_type = Input | Output | Register | Wire
 
-val add_declaration :
-  declaration AigerBdd.SymbolMap.t ->
-  declaration ->
-  declaration AigerBdd.SymbolMap.t
-    
-val of_declaration : declaration list -> declaration AigerBdd.SymbolMap.t
+type declaration = { symbol:AigerBdd.symbol; typ:declaration_type}
 
-(** arguments are the name and the size of the variable *)
-val input : ?size:int -> string -> declaration * Integer.t
-val output : ?size:int -> string -> declaration * Integer.t
-val reg : ?size:int -> string -> declaration * Integer.t
-val wire : ?size:int -> string -> declaration * Integer.t
+(** Group of declarations *)
+type declarations
 
-(** The first component gives the expressions that are non synthesizable and 
+(** Adds a declaration to a group *)
+val add_declaration : declarations -> declaration -> declarations
+
+(** Group a list of declarations *)
+val declarations_of_list : declaration list -> declarations
+
+(** The first component gives the expressions that are non synthesizable and
     raised the exception, the second one gives an expression describing the
     non synthesizable inputs. *)
 exception NonSynthesizable of (Boolean.t * Boolean.t)
@@ -29,9 +22,7 @@ val synthesize : declaration list -> Boolean.t -> Aiger.t
 
 (** Synthesize from the definition of how each variable should be updated.
     The expression on the left should be an output or a register.
-    Warning: if the expression on the right has size greater than the variable 
-    on the left, then its result is truncated. 
+    Warning: if the expression on the right has size greater than the variable
+    on the left, then its result is truncated.
 *)
 val functional_synthesis : (Integer.t * Integer.t) list -> Aiger.t
-
-val print_aiger : Aiger.t -> unit
