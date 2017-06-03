@@ -1,7 +1,7 @@
 open Common
 
 type t = 
-| EVar of string
+| EVar of Symbol.t
 | EExists of t list * t
 | EForall of t list * t
 | ENot of t
@@ -13,7 +13,7 @@ type t =
 | False
 
 let rec to_string = function 
-  | EVar s -> Printf.sprintf "%s" s
+  | EVar s -> Printf.sprintf "%s" (Symbol.to_string s)
   | EExists (list,e) -> Printf.sprintf "(exists [%s]. %s)" (to_string (EList list)) (to_string e)
   | EForall (list,e) -> Printf.sprintf "(forall [%s]. %s)" (to_string (EList list)) (to_string e)
   | ENot a -> Printf.sprintf "(not %s)" (to_string a)
@@ -113,10 +113,9 @@ let of_bdd bdd symbols =
   in
     
   let aux bdd_expr_list name = 
-    let var = AigerBdd.Variable.find name in
     BddMap.fold 
       (fun bdd expr accu->
-	let var_bdd = AigerBdd.Variable.to_bdd var in
+	let var_bdd = AigerBdd.bdd_of_symbol name in
 	let t = Cudd.bddRestrict bdd var_bdd in
 	let expr_t = conj expr (EVar name) in
         let e = Cudd.bddRestrict bdd (Cudd.bddNot var_bdd) in
@@ -136,7 +135,7 @@ let of_bdd bdd symbols =
   with _ -> failwith "in [of_bdd]: missing variables"
 
 let rec add_to_aiger aiger = function
-  | EVar s -> AigerImperative.string2lit_exn aiger s
+  | EVar s -> AigerImperative.string2lit_exn aiger (Symbol.to_string s)
   | ENot t -> 
     let v = add_to_aiger aiger t in 
     AigerImperative.neg v
@@ -149,31 +148,7 @@ let rec add_to_aiger aiger = function
   | x -> failwith ("in Boolean.add_to_aiger: unexpected expression : "^to_string x)
 	      
 let rec to_bdd = function
-  | EVar x -> BddVariable.to_bdd (BddVariable.find x)
-  | EForall (vl,e) -> 
-    let variables = 
-      List.fold_left
-	(fun accu e -> 
-	  match e with 
-	  | EVar x -> BddVariable.find x :: accu
-  	  | _ -> failwith "In to_bdd: universal quantification on expressions that are not variables"
-	) [] vl 
-    in
-    let cube = BddVariable.make_cube variables in
-    Cudd.bddUnivAbstract (to_bdd e) cube
-      
-  | EExists (vl,e) -> 
-    let variables = 
-      List.fold_left
-	(fun accu e -> 
-	  match e with 
-	  | EVar x -> BddVariable.find x :: accu
-	  | _ -> failwith "In to_bdd: existential quantification on expressions that are not variables"
-	) [] vl 
-    in
-    let cube = BddVariable.make_cube variables in
-    Cudd.bddExistAbstract (to_bdd e) cube
-
+  | EVar x -> AigerBdd.bdd_of_symbol x
   | ENot e -> Cudd.bddNot (to_bdd e)
   | EAnd (hd :: tl) -> List.fold_left Cudd.bddAnd (to_bdd hd) (List.map to_bdd tl)
   | EAnd [] -> Cudd.bddTrue()
@@ -181,3 +156,27 @@ let rec to_bdd = function
   | EOr [] -> Cudd.bddFalse()
   | True -> Cudd.bddTrue()
   | False -> Cudd.bddFalse()
+  | EForall (vl,e) -> 
+    let variables = 
+      List.fold_left
+	(fun accu e -> 
+	  match e with 
+	  | EVar x -> x :: accu
+  	  | _ -> failwith "In to_bdd: universal quantification on expressions that are not variables"
+	) [] vl 
+    in
+    let cube = AigerBdd.make_cube variables in
+    Cudd.bddUnivAbstract (to_bdd e) cube
+      
+  | EExists (vl,e) -> 
+    let variables = 
+      List.fold_left
+	(fun accu e -> 
+	  match e with 
+	  | EVar x -> x :: accu
+	  | _ -> failwith "In to_bdd: existential quantification on expressions that are not variables"
+	) [] vl 
+    in
+    let cube = AigerBdd.make_cube variables in
+    Cudd.bddExistAbstract (to_bdd e) cube
+

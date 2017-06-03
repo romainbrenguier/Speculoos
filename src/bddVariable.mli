@@ -3,7 +3,7 @@ val compare : t -> t -> int
 val find : string -> t
 val to_bdd : t -> Cudd.bdd
 val next : t -> t
-val make_cube : t list -> Cudd.cube
+val make_cube : Symbol.t list -> Cudd.cube
 val to_int : t -> int
 val of_int : int -> t
 val to_string : t -> string

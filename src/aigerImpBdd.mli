@@ -29,12 +29,16 @@ val add_bdd_to_aiger : AigerImperative.t -> AigerImperative.lit VariableMap.t ->
 exception Unsatisfiable of (AigerImperative.t * Cudd.bdd)
 
 (*
-(** Takes as argument the list of inputs, list of latches and list of outputs of the circuit to produce *)
+(** Takes as argument the list of inputs, list of latches and list of
+  outputs of the circuit to produce *)
 val bdd_to_aiger : inputs:symbol list -> latches:symbol list -> outputs:symbol list -> wires:symbol list -> Cudd.bdd -> AigerImperative.t
 *)
 
 (** the Bdd tell how to update the different latches *)
-val bdds_to_aiger : inputs:string list -> latches:(string * Cudd.bdd) list -> outputs:(string * Cudd.bdd) list -> AigerImperative.t
+val bdds_to_aiger :
+  inputs:Symbol.t list ->
+  latches:(Symbol.t * Cudd.bdd) list ->
+  outputs:(Symbol.t * Cudd.bdd) list -> AigerImperative.t
 
 val valuation_of_list : (BddVariable.t * bool) list -> bool VariableMap.t
 

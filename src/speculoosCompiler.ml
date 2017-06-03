@@ -1,7 +1,6 @@
 open Speculoos
 
-let output_file = ref ""
-let input_file = ref ""
+let input_file, output_file = ref "", ref ""
 
 let arguments = 
   let open Arg in
@@ -11,7 +10,6 @@ let set_input_file f = input_file := f
 
 let parse_arguments =
   Arg.parse arguments set_input_file ("usage: "^Sys.argv.(0)^" <options> file.spec")
-
     
 let main = 
   let inch = open_in !input_file in

@@ -1,9 +1,9 @@
 type declaration_type = Input | Output | Register | Wire
 
 (* TODO: AigerBdd.symbol should have its own module *)
-type declaration = { symbol:AigerBdd.symbol; typ:declaration_type}
+type declaration = { symbol:Symbol.t; typ:declaration_type}
 
-let declare typ s = { symbol=AigerBdd.of_aiger_symbol s; typ}
+let declare typ s = { symbol=s; typ}
 let declare_input = declare Input
 let declare_output = declare Output
 let declare_register = declare Register
@@ -125,8 +125,12 @@ let functional_synthesis updates =
                 then ((s, ExprToBdd.expr_to_bdd (Integer.get expr i))::lb,ob,i+1)
                 else if SymbolSet.mem s outputs
                 then (lb,(s, ExprToBdd.expr_to_bdd (Integer.get expr i))::ob,i+1)
-                else failwith ("In Speculog.functional_synthesis: the variable "^s^" is neither a latch nor an output")
-              | _ -> failwith "In Speculog.functional_synthesis: the expression on the left should be a variable"
+                else
+		  failwith ("In Speculog.functional_synthesis: the variable "^
+			       Symbol.to_string s^" is neither a latch nor an output")
+              | _ ->
+		 failwith ("In Speculog.functional_synthesis: the expression on the "^
+			      "left should be a variable")
             ) (lb,ob,0) ba_var
         in lb,ob
       ) ([],[]) updates

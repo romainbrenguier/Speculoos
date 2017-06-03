@@ -54,7 +54,6 @@ let select array list =
   aux list;
   make tab
 
-
 exception NonBoolean of t
 
 let of_boolean b = make [| b |]
@@ -72,19 +71,23 @@ let to_string b =
       ) (to_boolean_array b);
     Buffer.contents buf
 
-let get_expr a j = of_boolean (get a j) 
+let get_expr a j =
+  of_boolean (get a j) 
 
-let var_name name i = name^"<"^string_of_int i^">"
+let symbol_of_bit name i =
+  Symbol.of_string (name^"<"^string_of_int i^">")
+
 let var name size = 
-  make (Array.init size (fun i -> Boolean.var (var_name name i)))
+  make (Array.init size (fun i -> Boolean.var (symbol_of_bit name i)))
 
 let bool_var name = 
   of_boolean (Boolean.var name)
 
 let size_max l = 
-  let rec aux accu = function | [] -> accu | a :: l -> aux (max accu (Array.length a)) l
+  let rec aux accu = function
+    | [] -> accu
+    | a :: l -> aux (max accu (Array.length a)) l
   in aux 0 l
-      
 
 let bitwise op a b = 
   let size = size_max [a;b] in
@@ -106,7 +109,6 @@ let andR = bitwise_reduce Boolean.conj
 let orR = bitwise_reduce Boolean.disj
 let xorR = bitwise_reduce Boolean.xor
 
-
 let neg a = 
   let array = Array.init (size a)
     (fun i -> Boolean.neg (get a i))
@@ -120,7 +122,6 @@ let equals a b =
   let expr = 
     iter 0 (size-1) (fun i ->  Boolean.conj (Boolean.equals (get a i) (get b i))) Boolean.True in
   expr
-
 
 let add_1 a b c_in = 
   (Boolean.xor (Boolean.xor a b) c_in,
@@ -150,7 +151,6 @@ let ite c t e =
 let for_each bounds f =
   let b = Boolean.for_each bounds (fun x -> to_boolean (f x)) in
   of_boolean b
-
 
 let left_shift e i = 
   let size = max (size e + i) 1 in
@@ -240,7 +240,9 @@ let full_divide a b =
   let d = var "_d" size_d in 
   let r = var "_r" size_r in 
   let eq = Boolean.conj (less r b) (equals (add (mult d b) r) a) in
-  match solve eq [d;r] with [d_sol; r_sol] -> d_sol , r_sol | _ -> failwith "wrong number of variables in full_divide"
+  match solve eq [d;r] with
+  | [d_sol; r_sol] -> d_sol , r_sol
+  | _ -> failwith "wrong number of variables in full_divide"
     
 let div a b = fst (full_divide a b)
 
@@ -253,4 +255,3 @@ let multiplex index array =
 	i+1, ite (equals index (int i)) expr accu
       ) (0,of_array [|false|]) array
   in expr
-

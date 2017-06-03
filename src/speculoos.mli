@@ -72,7 +72,7 @@ end
 
 (** {2 Instructions} *)
 (** Instruction tree *)
-type t = 
+type t =
 | Update of (Expression.t * Expression.t)
 | When of (Expression.t * t)
 | If of (Expression.t * t * t)
@@ -90,13 +90,16 @@ val seq : t list -> t
 (** {2 Synthesis } *)
 
 val to_aiger : t -> Aiger.t
+
+(* TODO: SynthesisImp needs some rework
 val to_aig_imp : t -> AigerImperative.t
+*)
 
 (** If no filename is provided the aiger file is produced on the standard output *)
 val compile : ?filename:string -> t -> unit
 
 (** [import_module aig [a1,b1;...;an,bn] gen] import a module
-    renaming variables [ai] into [bi], the list of newly 
+    renaming variables [ai] into [bi], the list of newly
     created output variables is given as argument to gen, to generate
     the final AIG. In the end outputs are hidden. *)
 

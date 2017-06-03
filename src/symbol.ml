@@ -13,6 +13,8 @@ let reverse_table:(t, string) Hashtbl.t = Hashtbl.create 100
 
 let id (s:t) = (s:int)
 
+let with_id (s:int) = (s:t)
+
 let to_string s = Hashtbl.find reverse_table s
 
 let of_string s =
@@ -26,3 +28,18 @@ let of_string s =
     new_symbol
 
 let compare (a:t) (b:t) = a - b
+
+let rec new_symbol prefix =
+  if Hashtbl.mem symbol_table prefix
+  then
+    (* Since the prefix is already present in the table we add
+       a number at the end and increment it until we find a string that is
+       not already in use. *)
+    let i = ref 0 in
+    while Hashtbl.mem symbol_table (prefix^"#"^string_of_int !i)
+    do
+      incr i
+    done;
+    new_symbol (prefix^"#"^string_of_int !i)
+  else
+    of_string prefix

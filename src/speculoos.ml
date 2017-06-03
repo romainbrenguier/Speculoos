@@ -134,6 +134,7 @@ let to_aiger instructions =
     else instructions
   in functional_synthesis Synthesis.functional_synthesis ups
 
+(* TODO: SynthesisImp needs some rework
 let to_aig_imp instructions = 
   let inits = extract_init instructions in
   let ups = 
@@ -143,7 +144,8 @@ let to_aig_imp instructions =
   in
   let aig = functional_synthesis SynthesisImp.functional_synthesis ups in
   aig
-
+  *)
+  
 let compile ?(filename="") a =
   let aig = to_aiger a in
   if filename = ""
@@ -154,6 +156,7 @@ let compile ?(filename="") a =
     Aiger.write aig outch;
     close_out outch
 
+(* TODO : Are these used ? 
 let to_symbols aiger t = 
   let rec aux = function
     | EUnit -> []
@@ -175,7 +178,7 @@ let to_symbols aiger t =
 let rename aiger s typ name =
   let u = var s typ in
   let v = var name typ in
-  let s1,s2 = to_symbols aiger u, to_symbols aiger v in
+  let s1, s2 = to_symbols aiger u, to_symbols aiger v in
   let renaming = List.combine s1 s2 in
   let rename x = try List.assoc x renaming with Not_found -> x in
   AigerImperative.rename aiger rename
@@ -184,4 +187,4 @@ let hiding aiger s typ =
   let u = var s typ in
   let s = to_symbols aiger u in
   List.iter (AigerImperative.hide aiger) s
-
+  *)

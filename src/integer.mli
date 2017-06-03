@@ -14,7 +14,7 @@ val get : t -> int -> Boolean.t
 val get_expr : t -> int -> t
 val size : t -> int
 val var : string -> int -> t
-val bool_var : string -> t
+val bool_var : Symbol.t -> t
 
 (** Select the bits given by the list, each pairs corresponding to an interval. *)
 val select : t -> (int * int) list -> t

@@ -22,7 +22,7 @@ let to_string =
 let var name typ = 
   let rec aux prefix = function
     | Type.Unit -> EUnit
-    | Type.Bool -> EBool (Integer.to_boolean (Integer.bool_var prefix))
+    | Type.Bool -> EBool (Integer.to_boolean (Integer.bool_var (Symbol.of_string prefix)))
     | Type.Int i -> EInt (Integer.var prefix i)
 
     | Type.Array (t,i) -> 

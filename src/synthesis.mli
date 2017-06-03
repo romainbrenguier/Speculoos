@@ -1,7 +1,7 @@
 (** Verilog-like declarations *)
 type declaration_type = Input | Output | Register | Wire
 
-type declaration = { symbol:AigerBdd.symbol; typ:declaration_type}
+type declaration = { symbol : Symbol.t; typ : declaration_type}
 
 (** Group of declarations *)
 type declarations

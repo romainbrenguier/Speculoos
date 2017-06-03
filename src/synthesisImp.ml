@@ -1,16 +1,4 @@
 exception NonSynthesizable of (Boolean.t * Boolean.t)
-(*let synthesize declarations expr =
-  let types = of_declaration declarations in
-  let bdd = expr_to_bdd expr in
-  try
-    AigerBdd.bdd_to_aiger (inputs types) (registers types) (outputs types) (wires types) bdd
-  with (AigerBdd.Unsatisfiable (aig,bdd)) -> 
-    let expr_b = Boolean.of_bdd bdd (List.rev_append (inputs types) (registers types)) in
-    raise (NonSynthesizable (expr,expr_b))
-
-let add_synthesized declarations constraints aiger =
-  failwith "SynthesisImp.add_synthesized: unimplemented"
-*)
   
 module SymbolSet = AigerBdd.SymbolSet
 
@@ -66,8 +54,12 @@ let functional_synthesis updates =
 		then ((s,Integer.get expr i)::lb,ob,i+1)
 		else if SymbolSet.mem s outputs
 		then (lb,(s,(Integer.get expr i))::ob,i+1)
-		else failwith ("In SynthesisImp.functional_synthesis: the variable "^s^" is neither a latch nor an output")
-	      | _ -> failwith "In SynthesisImp.functional_synthesis: the expression on the left should be a variable"
+		else
+		  failwith ("In SynthesisImp.functional_synthesis: the variable "^
+			       Symbol.to_string s^" is neither a latch nor an output")
+	      | _ ->
+		 failwith ("In SynthesisImp.functional_synthesis: "^
+			      "the expression on the left should be a variable")
 	    ) (lb,ob,0) ba_var 
 	in lb,ob
       ) ([],[]) updates 

@@ -1,3 +1,4 @@
+(* TODO: This is very similar to Symbol module and could be factorized *)
 type t = int
 let compare a b = a - b
 let last_variable = ref 0

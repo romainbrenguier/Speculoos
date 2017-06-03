@@ -11,7 +11,6 @@ module SymbolMap = Map.Make(struct type t = string let compare = compare end)
 module SymbolSet = Set.Make(struct type t = string let compare = compare end)
 module VariableMap = Map.Make(Variable)
 
-
 let map_of_aiger aiger = 
   let m =
     List.fold_left
@@ -87,7 +86,9 @@ let add_bdd_to_aiger aig v2l bdd =
 	let lit = 
 	  try VariableMap.find (BddVariable.of_int variable) v2l 
 	  with Not_found -> 
-	    failwith ("In AigerBdd.add_bdd_to_aiger: variable "^string_of_int variable^" not found in the given Aiger.lit VariableMap.t")
+	    failwith ("In AigerBdd.add_bdd_to_aiger: variable "^
+			 string_of_int variable^
+			 " not found in the given Aiger.lit VariableMap.t")
 	in
 	let then_child = Cudd.t bdd in
 	let else_child = Cudd.e bdd in
@@ -105,7 +106,6 @@ let add_bdd_to_aiger aig v2l bdd =
   in 
   let res,_ = aux bdd cache in
   res
-
   
 let bdds_to_aiger ~inputs ~latches ~outputs =
   (* mapping variable to litterals *)
@@ -141,7 +141,6 @@ let bdds_to_aiger ~inputs ~latches ~outputs =
     ) outputs;
 
   aig 
-
 
 exception Unsatisfiable of (Aiger.t * Cudd.bdd)
 
