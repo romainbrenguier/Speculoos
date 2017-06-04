@@ -1,8 +1,8 @@
-(** This module defines usefull function for going from the aiger representation 
+(** This module defines usefull function for going from the aiger representation
  * to the BDD representation and reciproqually *)
 
-(** Initialize CUDD. 
-    The number of variables to be used is inferred from the 
+(** Initialize CUDD.
+    The number of variables to be used is inferred from the
     circuit that is provided. *)
 val init : Aiger.t -> unit
 
@@ -10,8 +10,9 @@ module SymbolMap : Map.S with type key = Symbol.t
 
 module SymbolSet : Set.S with type elt = Symbol.t
 
+(** Bdd associated to a symbol *)
 val bdd_of_symbol : Symbol.t -> Cudd.bdd
-  
+
 (** Map aiger literals to symbols. *)
 val map_of_aiger : Aiger.t -> Aiger.lit SymbolMap.t
 
@@ -22,9 +23,9 @@ val map_to_string : Aiger.lit SymbolMap.t -> string
     in the given aiger *)
 exception UndeclaredLit of Aiger.lit
 
-(** Add to the aiger file, gates to compute the result of the 
+(** Add to the aiger file, gates to compute the result of the
     evaluation of the BDD. The result contains the new aiger
-    file and the literal that points to the result. 
+    file and the literal that points to the result.
     All the variables of the BDD should correspond to literals of the given aiger
     file, or be inside the given SymbolMap.
     otherwise a [UndeclaredLit] exception will be raised.
@@ -49,7 +50,7 @@ val bdds_to_aiger :
 
 (** Makes a bdd cube from a list of symbols *)
 val make_cube : Symbol.t list -> Cudd.cube
-  
+
 val valuation_of_list : (Symbol.t * bool) list -> bool SymbolMap.t
 
 (** Convert the valuation to a BDD representation *)
@@ -59,32 +60,7 @@ val bdd_to_valuations : Cudd.bdd -> Symbol.t list -> (bool SymbolMap.t) list
 
 (** Fixpoint of an operation on BDD's *)
 val fixpoint : (Cudd.bdd -> Cudd.bdd) -> Cudd.bdd -> Cudd.bdd
-							   
-(** Reorder the gates of an aiger file so that the index on the left of a gate is always greater than those on the right *)
-val reorder_aiger : Aiger.t -> Aiger.t
 
-  (* TODO: usage of this should be replaced by Circuit module
-module Circuit :
-  sig
-    type t
-	   
-    val of_aiger : Aiger.t -> t
-				
-    (** Updates of the latches are stocked as BDDs. 
-    The returned table contain such a BDD for each latch and each output *)
-    val updates : t -> (Symbol.t , Cudd.bdd) Hashtbl.t
-    val variables : t -> SymbolSet.t
-    val next_variables : t -> SymbolSet.t
-    val array_variables : t -> Symbol.t array
-    val array_next_variables : t -> Symbol.t array
-    val composition_vector : t -> Cudd.bdd array
-    val map : t -> Aiger.lit SymbolMap.t
-		     
-    val rename_configuration : Cudd.bdd -> Symbol.t array -> Symbol.t array -> Cudd.bdd
-										     
-    val print_valuation : Aiger.t -> string list -> bool SymbolMap.t -> unit
-									    
-    val initial_state : Aiger.t -> bool SymbolMap.t
-					
-  end
-  *)  
+(** Reorder the gates of an aiger file so that the index on the left of a gate
+    is always greater than those on the right *)
+val reorder_aiger : Aiger.t -> Aiger.t

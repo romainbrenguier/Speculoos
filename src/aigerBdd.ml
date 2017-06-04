@@ -113,7 +113,7 @@ let add_bdd_to_aiger aiger v2l bdd =
       let else_child = Cudd.e bdd in
       let (aig,then_lit,cache) = aux then_child aig cache in
       let (aig,else_lit,cache) = aux else_child aig cache in
-      
+
       let aig, lit1 =
 	if then_lit = Aiger.aiger_false
 	then aig, Aiger.aiger_false
@@ -125,7 +125,7 @@ let add_bdd_to_aiger aiger v2l bdd =
 	  let aig = Aiger.add_and aig lit1 lit then_lit in
 	  aig, lit1
       in
-      
+
       let aig, lit2 =
 	if else_lit = Aiger.aiger_false
 	then aig, Aiger.aiger_false
@@ -137,15 +137,15 @@ let add_bdd_to_aiger aiger v2l bdd =
 	  let aig = Aiger.add_and aig lit2 (Aiger.aiger_not lit) else_lit in
 	  aig, lit2
       in
-      
+
       let aig,var3 = Aiger.new_var aig in
       let lit3 = Aiger.var2lit var3 in
       let aig = Aiger.add_and aig lit3 (Aiger.aiger_not lit1) (Aiger.aiger_not lit2) in
-      
+
       let res =
 	if Cudd.isComplement bdd then lit3 else Aiger.aiger_not lit3
       in
-      
+
       (aig,res,BddMap.add bdd res cache)
 
   in
@@ -259,7 +259,7 @@ let variables_aiger aiger =
       (fun vs (l,_) ->
 	(Aiger.lit2symbol aiger l
 	    |> string_of_aiger_symbol
-	    |> Symbol.of_string 
+	    |> Symbol.of_string
 	    |> SymbolSet.add) vs
       )
       vs
@@ -447,82 +447,3 @@ let reorder_aiger aiger =
     num_outputs =  List.length outputs;
     num_inputs =  List.length inputs;
     symbols=symbols; abstract=abstract; maxvar=max_lit/2}
-
-    (*
-module Circuit =
-  struct
-
-type t =
-  {
-    updates:(Symbol.t , Cudd.bdd) Hashtbl.t;
-    variables: SymbolSet.t;
-    next_variables: SymbolSet.t;
-    map: Aiger.lit SymbolMap.t;
-    array_variables: Symbol.t array;
-    array_next_variables: Symbol.t array;
-    composition_vector: Cudd.bdd array;
-  }
-
-let updates p = p.updates
-let variables p = p.variables
-let next_variables p = p.next_variables
-let array_variables p = p.array_variables
-let array_next_variables p = p.array_next_variables
-let composition_vector p = p.composition_vector
-let map p = p.map
-
-let of_aiger aiger =
-  let updates = compute_updates aiger in
-  let variables = variables_aiger aiger in
-  let next_variables = SymbolSet.fold (fun x accu -> SymbolSet.add (Symbol.next x) accu) variables SymbolSet.empty in
-  let array_variables = Array.of_list (SymbolSet.elements variables) in
-  let array_next_variables = Array.of_list (SymbolSet.elements next_variables) in
-  let composition_vector =
-    Array.init (* (aiger.Aiger.maxvar * 2 + 2) (* should it really be this value ? *)*)
-      (Symbol.max_var ())
-	       (fun i ->
-		try Hashtbl.find updates (i-1)
-		with Not_found -> Cudd.bddTrue())
-  in
-  let map = map_of_aiger aiger in
-  { updates = updates; variables=variables; next_variables = next_variables;
-    array_variables=array_variables; array_next_variables = array_next_variables;
-    composition_vector=composition_vector; map=map}
-
-let rename_configuration bdd variables next_variables =
-  Cudd.bddSwapSymbols bdd variables next_variables
-
-
-let print_valuation aiger names valuation =
-  List.iter
-    (fun name ->
-      let size = Aiger.size_symbol aiger name in
-      let value = ref 0 in
-      for i = size - 1 downto 0 do
-	(value := 2 * !value +
-	   (if SymbolMap.find (Symbol.find (of_aiger_symbol (name,Some i))) valuation
-	    then 1 else 0));
-	(*Printf.printf "%s.(%d) (= var %d): %b\n" name i (Symbol.to_int (Symbol.find (name,i))) (SymbolMap.find (Symbol.find (name,i)) valuation);*)
-
-      done;
-      Printf.printf "%s = %d\n" name !value
-    ) names
-
-let initial_state aiger =
-  valuation_of_list
-    (List.fold_left
-       (fun accu name ->
-	 let literals = Aiger.name_to_literals aiger name in
-	 let variables =
-	   failwith "unimplemented"
-	     (*Array.mapi
-	     (fun i lit ->
-	       let v = Symbol.find (name,i)
-	       in (v,false)
-	     ) literals*)
-	 in List.rev_append (Array.to_list variables) accu
-       ) [] (List.rev_append (Aiger.latches aiger) (Aiger.outputs aiger))
-    )
-
-end
-    *)
