@@ -1,3 +1,7 @@
+(** Variables in BDDs represent either a symbol or the next valuation
+    associated to symbol. Their indexes in the BDD are close so that
+    substitution is effecient. *)
+
 type t =
   | VSymbol of Symbol.t
   | VNext of Symbol.t
