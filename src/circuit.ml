@@ -14,7 +14,6 @@ type t =
     composition_vector: Cudd.bdd array;
   }
 
-
 let updates p = p.updates
 let variables p = p.variables
 let next_variables p = p.next_variables
@@ -124,9 +123,10 @@ let of_aiger aiger =
   in
   let array_variables = Array.of_list (VariableSet.elements variables) in
   let array_next_variables = Array.of_list (VariableSet.elements next_variables) in
+  let max_var = VariableSet.fold (fun b a -> max a (BddVariable.to_int b)) variables 0 in
   let composition_vector =
     Array.init (* (aiger.Aiger.maxvar * 2 + 2) (* should it really be this value ? *)*)
-      (BddVariable.max_var ())
+      (max_var + 1)
       (fun i ->
 	try Hashtbl.find updates (BddVariable.of_int (i-1))
 	with Not_found -> Cudd.bddTrue())

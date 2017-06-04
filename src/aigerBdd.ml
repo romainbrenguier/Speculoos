@@ -200,44 +200,46 @@ let bdd_to_aiger ~inputs ~latches ~outputs ~wires bdd =
   |> List.rev_append (List.map Symbol.id outputs)
   |> Cudd.make_cube
   in
-  let rec aux (bdd,accu) (sym,var) =
-    let value = Cudd.bddExistAbstract (Cudd.bddAnd (Cudd.ithVar var) bdd) cube in
+
+  (* TODO: document what aux does *)
+  let rec aux (bdd, accu) (sym, var) =
+    let value = Cudd.bddExistAbstract (Cudd.bddAnd (BddVariable.to_bdd var) bdd) cube in
     Cudd.bddAnd bdd
       (Cudd.bddOr
-	 (Cudd.bddAnd value (Cudd.ithVar var))
-	 (Cudd.bddAnd (Cudd.bddNot value) (Cudd.bddNot (Cudd.ithVar var)))),
-    (sym,value)::accu
+	 (Cudd.bddAnd value (BddVariable.to_bdd var))
+	 (Cudd.bddAnd (Cudd.bddNot value) (Cudd.bddNot (BddVariable.to_bdd var)))),
+    (sym, value)::accu
   in
 
   let unsatisfiable = Cudd.bddNot (Cudd.bddExistAbstract bdd cube) in
   if Cudd.equal unsatisfiable (Cudd.bddFalse ())
   then
-    (* Next valuation of the latch with id i is represented by $2*i+1$ *)
     let bdd, update_function =
       List.fold_left
 	aux
 	(bdd, [])
-	(List.map (fun l -> l ,  2 * Symbol.id l + 1 ) latches)
+	(List.map (fun l -> l ,  BddVariable.symbol_next l) latches)
     in
     let bdd, output_function =
       List.fold_left
 	aux
 	(bdd,[])
-	(List.map (fun o -> o , Symbol.id o) outputs)
+	(List.map (fun o -> o , BddVariable.symbol o) outputs)
     in
     bdds_to_aiger inputs update_function output_function
   else
+    (* We try to report useful information in the exception *)
     let _, update_function =
       List.fold_left
 	aux
-	(Cudd.bddTrue(),[])
-	(List.map (fun l -> l , 2 * Symbol.id l + 1) latches)
+	(Cudd.bddTrue(), [])
+	(List.map (fun l -> l , BddVariable.symbol_next l) latches)
     in
     let _, output_function =
       List.fold_left
 	aux
-	(Cudd.bddTrue(),[])
-	(List.map (fun o -> o , Symbol.id o) outputs)
+	(Cudd.bddTrue(), [])
+	(List.map (fun o -> o , BddVariable.symbol o) outputs)
     in
     let aig = bdds_to_aiger inputs update_function output_function in
     raise (Unsatisfiable (aig, unsatisfiable))
@@ -272,8 +274,9 @@ let bdd_of_valuation valuation =
     (fun var bool accu ->
      if bool
      then Cudd.bddAnd accu (bdd_of_symbol var)
-     else Cudd.bddAnd accu (Cudd.bddNot (bdd_of_symbol var))
-    ) valuation (Cudd.bddTrue ())
+     else Cudd.bddAnd accu (Cudd.bddNot (bdd_of_symbol var)))
+    valuation
+    (Cudd.bddTrue ())
 
 exception Undefined of string
 
