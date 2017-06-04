@@ -64,6 +64,7 @@ let bdd_to_valuations bdd variables =
   else aux bdd [SymbolMap.empty] variables
 
 let map_to_string map =
+  (* TODO: should use a String Buffer *)
   SymbolMap.fold
     (fun var lit accu ->
       accu^Symbol.to_string var^" -> "^string_of_int (Aiger.lit2int lit)^"; "
@@ -75,6 +76,7 @@ module BddMap = Map.Make(struct type t = Cudd.bdd let compare = Cudd.compare end
 
 (* We should normalize the cache: ie no negated nodes *)
 let add_bdd_to_aiger aiger v2l bdd =
+  (* v2l is a map from symbols to literals *)
   let v2l = SymbolMap.merge
     (fun k a b -> match a,b with
     | Some x , _ | None , Some x -> Some x
@@ -82,61 +84,69 @@ let add_bdd_to_aiger aiger v2l bdd =
     ) v2l (map_of_aiger aiger) in
   let cache = BddMap.empty in
 
+  (* TODO: what does aux do? *)
   let rec aux bdd aig cache =
-    try (aig, BddMap.find bdd cache,cache)
-    with Not_found ->
+    try
       if Cudd.isConstant bdd
       then
 	if Cudd.value bdd = 1
-	then (aig,Aiger.aiger_true,cache)
-	else (aig,Aiger.aiger_false,cache)
+	then (aig, Aiger.aiger_true, cache)
+	else (aig, Aiger.aiger_false, cache)
       else
-	let variable = Cudd.nodeReadIndex bdd in
-	let lit =
-	  try SymbolMap.find (Symbol.with_id variable) v2l
-	  with Not_found ->
-	    failwith ("In AigerBdd.add_bdd_to_aiger: variable "^
-		      string_of_int variable^
-		      " not found in the given Aiger.lit SymbolMap.t")
-	in
-	let then_child = Cudd.t bdd in
-	let else_child = Cudd.e bdd in
-	let (aig,then_lit,cache) = aux then_child aig cache in
-	let (aig,else_lit,cache) = aux else_child aig cache in
-
-	let aig, lit1 =
-	  if then_lit = Aiger.aiger_false
-	  then aig, Aiger.aiger_false
-	  else if then_lit = Aiger.aiger_true
-	  then aig, lit
+	(* Try to find the result in the cache *)
+	(aig, BddMap.find bdd cache, cache)
+    with Not_found ->
+      let variable = Cudd.nodeReadIndex bdd in
+      let lit =
+	try
+	  if variable mod 2 = 0
+	  then
+	    SymbolMap.find (Symbol.with_id (variable/2)) v2l
 	  else
-	    let aig,var1 = Aiger.new_var aig in
-	    let lit1 = Aiger.var2lit var1 in
-	    let aig = Aiger.add_and aig lit1 lit then_lit in
-	    aig, lit1
-	in
-
-	let aig, lit2 =
-	  if else_lit = Aiger.aiger_false
-	  then aig, Aiger.aiger_false
-	  else if else_lit = Aiger.aiger_true
-	  then aig, Aiger.aiger_not lit
-	  else
-	    let aig,var2 = Aiger.new_var aig in
-	    let lit2 = Aiger.var2lit var2 in
-	    let aig = Aiger.add_and aig lit2 (Aiger.aiger_not lit) else_lit in
-	    aig, lit2
-	in
-
-	let aig,var3 = Aiger.new_var aig in
-	let lit3 = Aiger.var2lit var3 in
-	let aig = Aiger.add_and aig lit3 (Aiger.aiger_not lit1) (Aiger.aiger_not lit2) in
-
-	let res =
-	  if Cudd.isComplement bdd then lit3 else Aiger.aiger_not lit3
-	in
-
-	(aig,res,BddMap.add bdd res cache)
+	    raise Not_found
+	with Not_found ->
+	  failwith ("In AigerBdd.add_bdd_to_aiger: variable "^
+		       string_of_int variable^
+		       " not found in the given Aiger.lit SymbolMap.t")
+      in
+      let then_child = Cudd.t bdd in
+      let else_child = Cudd.e bdd in
+      let (aig,then_lit,cache) = aux then_child aig cache in
+      let (aig,else_lit,cache) = aux else_child aig cache in
+      
+      let aig, lit1 =
+	if then_lit = Aiger.aiger_false
+	then aig, Aiger.aiger_false
+	else if then_lit = Aiger.aiger_true
+	then aig, lit
+	else
+	  let aig,var1 = Aiger.new_var aig in
+	  let lit1 = Aiger.var2lit var1 in
+	  let aig = Aiger.add_and aig lit1 lit then_lit in
+	  aig, lit1
+      in
+      
+      let aig, lit2 =
+	if else_lit = Aiger.aiger_false
+	then aig, Aiger.aiger_false
+	else if else_lit = Aiger.aiger_true
+	then aig, Aiger.aiger_not lit
+	else
+	  let aig,var2 = Aiger.new_var aig in
+	  let lit2 = Aiger.var2lit var2 in
+	  let aig = Aiger.add_and aig lit2 (Aiger.aiger_not lit) else_lit in
+	  aig, lit2
+      in
+      
+      let aig,var3 = Aiger.new_var aig in
+      let lit3 = Aiger.var2lit var3 in
+      let aig = Aiger.add_and aig lit3 (Aiger.aiger_not lit1) (Aiger.aiger_not lit2) in
+      
+      let res =
+	if Cudd.isComplement bdd then lit3 else Aiger.aiger_not lit3
+      in
+      
+      (aig,res,BddMap.add bdd res cache)
 
   in
   let aig,res,_ = aux bdd aiger cache in
