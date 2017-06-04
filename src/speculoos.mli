@@ -76,7 +76,8 @@ type t =
 | Update of (Expression.t * Expression.t)
 | When of (Expression.t * t)
 | If of (Expression.t * t * t)
-(* Warning: init should not be inside if or when constructs or it will be ignored. *)
+(* Warning: init should not be inside if or when constructs or it will
+   be ignored. TODO: this should be enforced using variant types *)
 | Init of (Expression.t * Expression.t)
 | Seq of t list
 
@@ -89,6 +90,7 @@ val seq : t list -> t
 
 (** {2 Synthesis } *)
 
+(** Create an aiger file from instructions *)
 val to_aiger : t -> Aiger.t
 
 (* TODO: SynthesisImp needs some rework
@@ -97,12 +99,3 @@ val to_aig_imp : t -> AigerImperative.t
 
 (** If no filename is provided the aiger file is produced on the standard output *)
 val compile : ?filename:string -> t -> unit
-
-(** [import_module aig [a1,b1;...;an,bn] gen] import a module
-    renaming variables [ai] into [bi], the list of newly
-    created output variables is given as argument to gen, to generate
-    the final AIG. In the end outputs are hidden. *)
-
-(** Not implemented yet because compose is still missing from AigerImperative *)
-(*val use_module : Aiger.t -> inputs:((string * Expression.t) list) -> outputs:((string * string) list) -> (Expression.t list -> Aiger.t) -> Aiger.t
-*)
