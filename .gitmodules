@@ -1,3 +1,6 @@
 [submodule "ocaml-aiger"]
 	path = ocaml-aiger
 	url = git@github.com:romainbrenguier/ocaml-aiger.git
+[submodule "ocaml-cudd"]
+	path = ocaml-cudd
+	url = git@github.com:romainbrenguier/ocaml-cudd.git
