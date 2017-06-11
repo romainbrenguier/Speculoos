@@ -1,0 +1,3 @@
+[submodule "ocaml-aiger"]
+	path = ocaml-aiger
+	url = git@github.com:romainbrenguier/ocaml-aiger.git
