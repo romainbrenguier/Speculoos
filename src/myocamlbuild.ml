@@ -2,7 +2,7 @@ open Ocamlbuild_plugin
 open Command
 
 let ocaml_aiger="../../ocaml-aiger/"
-let ocaml_cudd="../../../ocaml-cudd/"
+let ocaml_cudd="../../ocaml-cudd/"
   
 let () =
   dispatch 
